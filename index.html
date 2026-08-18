@@ -1065,6 +1065,47 @@ function githubHeaders(withAuth){
   return headers;
 }
 
+async function fetchJsonQuiet(url, headers){
+  try{
+    const res = await fetch(url, { cache: "no-store", headers: headers || {} });
+    if(!res.ok) return null;
+    return await res.json();
+  }catch(_){
+    return null;
+  }
+}
+
+async function fetchRemoteState(){
+  const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${encodeURIComponent(GH_DATA_PATH)}?ref=${encodeURIComponent(GH_BRANCH)}&t=${Date.now()}`;
+  const json = await fetchJsonQuiet(apiUrl, githubHeaders(false));
+  if(json && json.content){
+    fileSha = json.sha || fileSha;
+    const text = decodeBase64(json.content || "");
+    return { sha: json.sha || null, data: text ? JSON.parse(text) : null };
+  }
+  if(json && json.sha) fileSha = json.sha;
+
+  const localFile = await fetchJsonQuiet(`${GH_DATA_PATH}?t=${Date.now()}`);
+  if(localFile) return { sha: fileSha, data: localFile };
+
+  const raw = await fetchJsonQuiet(
+    `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${GH_DATA_PATH}?t=${Date.now()}`
+  );
+  if(raw) return { sha: fileSha, data: raw };
+
+  throw new Error("Impossible de joindre GitHub (réseau ou bloqueur). Réessaie, ou désactive le bloqueur pour github.com.");
+}
+
+async function fetchFileSha(){
+  const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${encodeURIComponent(GH_DATA_PATH)}?ref=${encodeURIComponent(GH_BRANCH)}&t=${Date.now()}`;
+  const json = await fetchJsonQuiet(apiUrl, githubHeaders(false));
+  if(json && json.sha){
+    fileSha = json.sha;
+    return json.sha;
+  }
+  return fileSha;
+}
+
 function serializeState(){
   const data = snapshotState();
   persistLocal(data);
@@ -1105,40 +1146,6 @@ function applyState(data){
   fillKidNameInputs();
 }
 
-async function fetchRemoteJsonFile(){
-  const res = await fetch(
-    `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${encodeURIComponent(GH_BRANCH)}/${GH_DATA_PATH}?t=${Date.now()}`,
-    { cache: "no-store" }
-  );
-  if(!res.ok) return null;
-  return res.json();
-}
-
-async function fetchRemoteState(){
-  const res = await fetch(
-    `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${encodeURIComponent(GH_DATA_PATH)}?ref=${encodeURIComponent(GH_BRANCH)}&t=${Date.now()}`,
-    {
-      cache: "no-store",
-      headers: {
-        ...githubHeaders(true),
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache"
-      }
-    }
-  );
-  if(res.status === 404) return { sha: null, data: null };
-  if(!res.ok){
-    const fallback = await fetchRemoteJsonFile();
-    if(fallback) return { sha: null, data: fallback };
-    const body = await res.text();
-    throw new Error(`Lecture GitHub ${res.status}: ${body}`);
-  }
-  const json = await res.json();
-  const text = decodeBase64(json.content || "");
-  fileSha = json.sha || null;
-  return { sha: json.sha, data: text ? JSON.parse(text) : null };
-}
-
 async function saveRemoteState(){
   const token = getToken();
   if(!token){
@@ -1160,7 +1167,6 @@ async function saveRemoteState(){
       `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${encodeURIComponent(GH_DATA_PATH)}`,
       {
         method: "PUT",
-        cache: "no-store",
         headers: { ...githubHeaders(true), "Content-Type": "application/json" },
         body: JSON.stringify(body)
       }
@@ -1168,12 +1174,21 @@ async function saveRemoteState(){
   }
 
   if(!fileSha){
-    ({ sha: fileSha } = await fetchRemoteState());
+    fileSha = await fetchFileSha();
   }
-  let res = await put(fileSha);
-  if(res.status === 409){
-    ({ sha: fileSha } = await fetchRemoteState());
+  let res;
+  try{
     res = await put(fileSha);
+  }catch(err){
+    throw new Error("Impossible d'enregistrer (réseau ou bloqueur). Vérifie le jeton et github.com.");
+  }
+  if(res.status === 409){
+    fileSha = await fetchFileSha();
+    try{
+      res = await put(fileSha);
+    }catch(err){
+      throw new Error("Impossible d'enregistrer (réseau ou bloqueur). Vérifie le jeton et github.com.");
+    }
   }
   if(res.status === 401 || res.status === 403){
     throw new Error("Jeton refusé. Vérifie qu'il a Contents: Read and write sur infinitethinking/kids.");
