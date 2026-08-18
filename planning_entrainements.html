@@ -281,18 +281,21 @@
     margin-top:1px;
   }
   .event.optional{
-    outline:2px dotted var(--ink);
+    background:#eceae4 !important;
+    border-color:#c5c0b5 !important;
+    color:#5c564a;
+    outline:2px dashed #9a9488;
     outline-offset:1px;
   }
-  .event.optional.club-tri{outline-color:var(--tri);}
-  .event.optional.club-bmx{outline-color:var(--bmx);}
-  .event.optional.club-stade{outline-color:var(--stade);}
+  .event.optional .sport-icon{color:#8a8271 !important;}
+  .event.optional .activity,
+  .event.optional .time{color:#5c564a;}
   .event.conflict{
     outline:2px solid var(--warn);
     outline-offset:1px;
   }
   .event.optional.conflict{
-    outline:2px dotted var(--warn);
+    outline:2px dashed var(--warn);
   }
   .conflict-flag{
     color:var(--warn);
@@ -321,19 +324,28 @@
   .kid-btn.on-O{background:var(--o-color);border-color:var(--o-color);color:#fff;}
   .kid-btn.on-L{background:var(--l-color);border-color:var(--l-color);color:#fff;}
 
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    z-index:80;
+    background:rgba(27,36,48,0.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+  }
+  .modal-overlay[hidden]{display:none !important;}
   .edit-dialog{
     border:1px solid var(--line);
     border-radius:14px;
     padding:0;
     width:min(440px, calc(100vw - 24px));
+    max-height:calc(100vh - 36px);
+    overflow:auto;
     background:var(--paper);
     color:var(--ink);
     box-shadow:0 18px 50px rgba(27,36,48,0.28);
   }
-  .edit-dialog::backdrop{
-    background:rgba(27,36,48,0.4);
-  }
-  .edit-dialog[open]{display:flex;flex-direction:column;}
   .modal-head{
     display:flex;
     align-items:center;
@@ -374,22 +386,22 @@
   }
   .addr-wrap{position:relative;}
   .addr-suggest{
-    position:absolute;
-    left:0;
-    right:0;
-    top:100%;
-    z-index:2;
-    margin:4px 0 0;
-    padding:4px;
+    margin:6px 0 0;
+    padding:0;
     list-style:none;
     background:#fff;
     border:1px solid var(--line);
     border-radius:8px;
-    max-height:220px;
+    max-height:180px;
     overflow:auto;
-    box-shadow:0 8px 20px rgba(27,36,48,0.12);
   }
   .addr-suggest[hidden]{display:none;}
+  .addr-hint{
+    font-size:11px;
+    font-weight:500;
+    color:#8a8271;
+    margin-top:4px;
+  }
   .addr-suggest button{
     display:block;
     width:100%;
@@ -404,7 +416,7 @@
   }
   .addr-suggest button:hover,
   .addr-suggest button.active{
-    background:var(--tri-bg);
+    background:#eceae4;
   }
   .modal-actions{
     display:flex;
@@ -421,6 +433,10 @@
     font-size:13px;
     font-weight:700;
     cursor:pointer;
+  }
+  .text-btn.ghost{
+    background:#fff;
+    color:var(--ink);
   }
   .opt-switch{
     border:none;
@@ -587,7 +603,8 @@
   </label>
 </aside>
 
-<dialog id="editModal" class="edit-dialog" aria-labelledby="editModalTitle">
+<div id="editOverlay" class="modal-overlay" hidden>
+  <div class="edit-dialog" id="editModal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
   <div class="modal-head">
     <h2 id="editModalTitle">Modifier la séance</h2>
     <button class="icon-btn ghost" id="editCloseBtn" type="button" title="Fermer" aria-label="Fermer">
@@ -615,27 +632,30 @@
     </div>
     <div class="modal-row">
       <label>Début
-        <input id="editStart" type="text" inputmode="numeric" placeholder="HH:MM" autocomplete="off">
+        <input id="editStart" type="time" step="300" required>
       </label>
       <label>Fin
-        <input id="editEnd" type="text" inputmode="numeric" placeholder="HH:MM" autocomplete="off">
+        <input id="editEnd" type="time" step="300" required>
       </label>
     </div>
     <label>Activité
-      <input id="editActivity" type="text" autocomplete="off">
+      <input id="editActivity" type="text" placeholder="Natation, BMX…" autocomplete="off">
     </label>
     <label>Lieu
       <div class="addr-wrap">
-        <input id="editLoc" type="text" placeholder="Adresse suisse, piscine, stade…" autocomplete="off" spellcheck="false">
+        <input id="editLoc" type="text" placeholder="Rue, piscine, stade…" autocomplete="off" spellcheck="false">
+        <div class="addr-hint" id="addrHint">Tape 3 lettres : adresses suisses (geo.admin.ch)</div>
         <ul class="addr-suggest" id="addrSuggest" hidden></ul>
       </div>
     </label>
     <div class="modal-actions">
+      <button class="text-btn ghost" id="editIcsBtn" type="button">Calendrier .ics</button>
       <button class="text-btn ghost" id="editCancelBtn" type="button">Annuler</button>
       <button class="text-btn" type="submit">Enregistrer</button>
     </div>
   </form>
-</dialog>
+  </div>
+</div>
 
 <script>
 const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
@@ -688,6 +708,7 @@ function defaultEvents(){
 let events = catalogEvents();
 let assignments = {};
 let editingId = null;
+let isNewEvent = false;
 let kidNames = {O:"O", L:"L"};
 let deletedIds = [];
 let fileSha = null;
@@ -756,7 +777,7 @@ function normalizeEvent(raw){
     club,
     sport,
     verify: !!raw.verify,
-    optional: !!raw.optional
+    optional: raw.optional === true
   };
 }
 
@@ -787,8 +808,8 @@ function fillKidNameInputs(){
 }
 
 function flushEditFields(){
-  const modal = document.getElementById("editModal");
-  if(modal && modal.open && editingId) applyModalToEvent();
+  const overlay = document.getElementById("editOverlay");
+  if(overlay && !overlay.hidden && editingId) applyModalToEvent();
 }
 
 function loadLocalState(){
@@ -1292,15 +1313,20 @@ function downloadIcs(ev){
     markSave(false, "Pas de dates pour cette séance sur 2026–2027");
     return;
   }
+  const filename = icsFilename(ev);
   const blob = new Blob([text], {type:"text/calendar;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = icsFilename(ev);
+  a.download = filename;
+  a.rel = "noopener";
+  a.style.display = "none";
   document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  a.dispatchEvent(new MouseEvent("click", {bubbles:true, cancelable:true, view:window}));
+  setTimeout(() => {
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 2500);
 }
 
 function render(){
@@ -1493,6 +1519,17 @@ function fillEditSelects(){
   document.getElementById("editDay").innerHTML = DAYS.map(d => `<option value="${d}">${d}</option>`).join("");
 }
 
+function toHm(value, fallback){
+  const m = String(value || "").match(/^(\d{1,2}):(\d{2})/);
+  if(!m) return fallback || "18:00";
+  return String(m[1]).padStart(2,"0") + ":" + m[2];
+}
+
+function isEditOpen(){
+  const overlay = document.getElementById("editOverlay");
+  return overlay && !overlay.hidden;
+}
+
 function openEditModal(id){
   const ev = findEvent(id);
   if(!ev) return;
@@ -1502,31 +1539,38 @@ function openEditModal(id){
   document.getElementById("editClub").value = ev.club || "tri";
   document.getElementById("editSport").value = ev.sport || "";
   document.getElementById("editDay").value = ev.day;
-  document.getElementById("editStart").value = ev.start || "";
-  document.getElementById("editEnd").value = ev.end || "";
-  document.getElementById("editActivity").value = ev.activity || "";
+  document.getElementById("editStart").value = toHm(ev.start, "18:00");
+  document.getElementById("editEnd").value = toHm(ev.end, "19:00");
+  document.getElementById("editActivity").value = ev.activity === "Nouvelle séance" ? "" : (ev.activity || "");
   document.getElementById("editLoc").value = ev.loc || "";
-  setOptionalToggle(!!ev.optional);
-  document.getElementById("editModalTitle").textContent =
-    ev.activity && ev.activity !== "Nouvelle séance" ? ev.activity : "Modifier la séance";
-  const modal = document.getElementById("editModal");
-  if(typeof modal.showModal === "function") modal.showModal();
-  else modal.setAttribute("open", "");
-  document.getElementById("editActivity").focus();
-  document.getElementById("editActivity").select();
+  document.getElementById("addrHint").textContent = "Tape 3 lettres : adresses suisses (geo.admin.ch)";
+  setOptionalToggle(ev.optional === true);
+  document.getElementById("editModalTitle").textContent = isNewEvent ? "Nouvelle séance" : "Modifier la séance";
+  const overlay = document.getElementById("editOverlay");
+  overlay.hidden = false;
+  overlay.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  const activity = document.getElementById("editActivity");
+  setTimeout(() => {
+    activity.focus();
+    activity.select();
+  }, 30);
 }
 
 function closeEditModal(save){
   if(save) applyModalToEvent();
-  hideAddrSuggest();
-  const modal = document.getElementById("editModal");
-  if(modal.open && typeof modal.close === "function") modal.close();
-  else modal.removeAttribute("open");
-  editingId = null;
-  if(save){
-    scheduleSave(true);
-    render();
+  else if(isNewEvent && editingId){
+    events = events.filter(e => e.id !== editingId);
   }
+  hideAddrSuggest();
+  const overlay = document.getElementById("editOverlay");
+  overlay.hidden = true;
+  overlay.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  editingId = null;
+  isNewEvent = false;
+  if(save) scheduleSave(true);
+  render();
 }
 
 function applyModalToEvent(){
@@ -1535,9 +1579,9 @@ function applyModalToEvent(){
   ev.club = document.getElementById("editClub").value;
   ev.sport = document.getElementById("editSport").value;
   ev.day = document.getElementById("editDay").value;
-  ev.start = document.getElementById("editStart").value.trim() || ev.start;
-  ev.end = document.getElementById("editEnd").value.trim() || ev.end;
-  ev.activity = document.getElementById("editActivity").value.trim() || ev.activity;
+  ev.start = toHm(document.getElementById("editStart").value, ev.start);
+  ev.end = toHm(document.getElementById("editEnd").value, ev.end);
+  ev.activity = document.getElementById("editActivity").value.trim() || "Séance";
   ev.loc = document.getElementById("editLoc").value.trim();
   ev.optional = document.getElementById("editOptional").getAttribute("aria-pressed") === "true";
 }
@@ -1548,49 +1592,48 @@ function stripHtml(html){
 
 function hideAddrSuggest(){
   const box = document.getElementById("addrSuggest");
+  if(!box) return;
   box.hidden = true;
   box.innerHTML = "";
 }
 
 let addrTimer = null;
 let addrReq = 0;
-const GENEVA_BBOX = "496000,114000,506000,123000";
 
 async function searchSwissAddress(query){
   const q = query.trim();
+  const hint = document.getElementById("addrHint");
   if(q.length < 3){
     hideAddrSuggest();
+    if(hint) hint.textContent = "Tape 3 lettres : adresses suisses (geo.admin.ch)";
     return;
   }
   const n = ++addrReq;
+  if(hint) hint.textContent = "Recherche…";
   try{
     const params = new URLSearchParams({
       searchText: q,
       type: "locations",
       origins: "address,gg25,gazetteer",
       limit: "8",
-      lang: "fr",
-      bbox: GENEVA_BBOX,
-      sortbbox: "true"
+      lang: "fr"
     });
-    let res = await fetch(`https://api3.geo.admin.ch/rest/services/api/SearchServer?${params}`);
-    if(!res.ok) return;
-    let data = await res.json();
+    const res = await fetch("https://api3.geo.admin.ch/rest/services/api/SearchServer?" + params.toString());
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
     if(n !== addrReq) return;
-    let rows = Array.isArray(data.results) ? data.results : [];
-    if(!rows.length){
-      params.delete("bbox");
-      params.delete("sortbbox");
-      res = await fetch(`https://api3.geo.admin.ch/rest/services/api/SearchServer?${params}`);
-      if(!res.ok) return;
-      data = await res.json();
-      if(n !== addrReq) return;
-      rows = Array.isArray(data.results) ? data.results : [];
-    }
+    const rows = Array.isArray(data.results) ? data.results : [];
     const box = document.getElementById("addrSuggest");
     box.innerHTML = "";
     const seen = new Set();
-    rows.forEach(row => {
+    const ranked = rows.slice().sort((a,b)=>{
+      const la = String((a.attrs||{}).label || (a.attrs||{}).detail || "");
+      const lb = String((b.attrs||{}).label || (b.attrs||{}).detail || "");
+      const ga = /ge|genève|geneve/i.test(la) ? 0 : 1;
+      const gb = /ge|genève|geneve/i.test(lb) ? 0 : 1;
+      return ga - gb;
+    });
+    ranked.forEach(row => {
       const attrs = row.attrs || {};
       const label = stripHtml(attrs.label || attrs.detail || "");
       if(!label || seen.has(label.toLowerCase())) return;
@@ -1599,29 +1642,34 @@ async function searchSwissAddress(query){
       const btn = document.createElement("button");
       btn.type = "button";
       btn.textContent = label;
+      btn.addEventListener("mousedown", (e)=> e.preventDefault());
       btn.addEventListener("click", ()=>{
         document.getElementById("editLoc").value = label;
         hideAddrSuggest();
+        if(hint) hint.textContent = "Adresse sélectionnée";
         document.getElementById("editLoc").focus();
       });
       li.appendChild(btn);
       box.appendChild(li);
     });
     box.hidden = box.childElementCount === 0;
+    if(hint) hint.textContent = box.childElementCount ? `${box.childElementCount} lieu(x)` : "Aucun lieu trouvé — tu peux taper librement";
   }catch(_){
-    if(n === addrReq) hideAddrSuggest();
+    if(n === addrReq){
+      hideAddrSuggest();
+      if(hint) hint.textContent = "Recherche indisponible — tape le lieu à la main";
+    }
   }
 }
 
 function addSession(day){
   const id = "custom_" + Date.now();
   deletedIds = deletedIds.filter(x => x !== id);
+  isNewEvent = true;
   events.push({
     id, day, start:"18:00", end:"19:00",
-    club:"tri", sport:"swim", activity:"Nouvelle séance", loc:"", optional:false
+    club:"tri", sport:"swim", activity:"", loc:"", optional:false
   });
-  scheduleSave(true);
-  render();
   openEditModal(id);
 }
 
@@ -1637,13 +1685,19 @@ document.getElementById('editForm').addEventListener('submit', (e)=>{
 });
 document.getElementById('editCloseBtn').addEventListener('click', ()=> closeEditModal(false));
 document.getElementById('editCancelBtn').addEventListener('click', ()=> closeEditModal(false));
-document.getElementById('editModal').addEventListener('close', ()=>{
-  hideAddrSuggest();
-  if(editingId) editingId = null;
+document.getElementById('editOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === "editOverlay") closeEditModal(false);
+});
+document.getElementById('editIcsBtn').addEventListener('click', ()=>{
+  applyModalToEvent();
+  const ev = findEvent(editingId);
+  if(ev) downloadIcs(ev);
 });
 document.getElementById('editOptional').addEventListener('click', ()=>{
   const on = document.getElementById('editOptional').getAttribute('aria-pressed') !== 'true';
   setOptionalToggle(on);
+  const ev = findEvent(editingId);
+  if(ev) ev.optional = on;
 });
 document.getElementById('editLoc').addEventListener('input', ()=>{
   clearTimeout(addrTimer);
@@ -1666,8 +1720,10 @@ document.getElementById('closeSettingsBtn').addEventListener('click', closeSetti
 document.getElementById('drawerBackdrop').addEventListener('click', closeSettings);
 document.addEventListener('keydown', (e)=>{
   if(e.key !== 'Escape') return;
-  const modal = document.getElementById('editModal');
-  if(modal.open) return;
+  if(isEditOpen()){
+    closeEditModal(false);
+    return;
+  }
   closeSettings();
 });
 
