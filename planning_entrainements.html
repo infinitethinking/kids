@@ -1233,8 +1233,11 @@ function icsFold(line){
 function eventSummary(ev){
   const a = getAssign(ev.id);
   const names = KID_IDS.filter(k => a[k]).map(kidLabel);
-  if(!names.length) return ev.activity;
-  return `${ev.activity} — ${names.join(" & ")}`;
+  const sport = sportById(ev.sport);
+  const sportLabel = sport ? sport.label : (ev.activity || "Séance");
+  if(names.length === 1) return `${names[0]} | ${sportLabel}`;
+  if(names.length > 1) return `${names.join(" & ")} | ${sportLabel}`;
+  return ev.activity || sportLabel;
 }
 
 function icsFilename(ev){
