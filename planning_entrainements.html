@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>Planning entraînements — O & L</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="favicon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=add,calendar_month,close,delete,directions_bike,directions_run,edit,pool,save,settings,toggle_off,toggle_on,warning">
 <style>
   .material-symbols-outlined{
@@ -316,6 +319,7 @@
     gap:5px;
     flex-direction:column;
   }
+  .edit-fields.show{display:flex;}
   .opt-row{
     display:flex;
     align-items:center;
@@ -510,10 +514,20 @@ const SPORTS = [
   {id:"run", label:"Course", icon:"directions_run"}
 ];
 
-function defaultEvents(){
+function catalogEvents(){
   return [
-    {id:"bmx1", day:"Lundi",    start:"17:45", end:"19:15", club:"bmx",   sport:"bike", activity:"BMX", loc:""},
-    {id:"bmx2", day:"Mercredi", start:"14:00", end:"16:00", club:"bmx",   sport:"bike", activity:"BMX", loc:""},
+    {id:"bmx1", day:"Lundi",    start:"17:45", end:"19:15", club:"bmx", sport:"bike", activity:"BMX", loc:""},
+    {id:"bmx2", day:"Mercredi", start:"14:00", end:"16:00", club:"bmx", sport:"bike", activity:"BMX", loc:""},
+    {id:"tcg-jtn-lun-nat", day:"Lundi",    start:"18:00", end:"19:00", club:"tri", sport:"swim", activity:"Natation Jeunes tous niveaux", loc:"Les Vernets ou lac"},
+    {id:"tcg-jtn-mar-cap", day:"Mardi",    start:"18:00", end:"19:30", club:"tri", sport:"run",  activity:"Course à pied Jeunes tous niveaux", loc:"Bout-du-monde"},
+    {id:"tcg-jtn-mer-nat", day:"Mercredi", start:"14:00", end:"15:00", club:"tri", sport:"swim", activity:"Natation Jeunes tous niveaux", loc:"Chandieu"},
+    {id:"tcg-jtn-jeu-cap", day:"Jeudi",    start:"18:00", end:"19:30", club:"tri", sport:"run",  activity:"Course à pied Jeunes tous niveaux", loc:"Bout-du-monde"},
+    {id:"tcg-jtn-sam-nat", day:"Samedi",   start:"11:00", end:"12:30", club:"tri", sport:"swim", activity:"Natation Jeunes tous niveaux", loc:"Pâquis centre"}
+  ];
+}
+
+function defaultEvents(){
+  return catalogEvents().concat([
     {id:"ath1", day:"Mercredi", start:"14:00", end:"16:00", club:"stade", sport:"run",  activity:"Athlétisme", loc:""},
     {id:"ath2", day:"Mercredi", start:"16:00", end:"18:00", club:"stade", sport:"run",  activity:"Athlétisme", loc:""},
     {id:"ath3", day:"Vendredi", start:"18:00", end:"20:00", club:"stade", sport:"run",  activity:"Athlétisme", loc:""},
@@ -531,22 +545,26 @@ function defaultEvents(){
     {id:"trA12",day:"Samedi",   start:"18:30", end:"20:00", club:"tri", sport:"run",  activity:"Transitions (TRG & jeunes perf.)", loc:"CO Marais"},
     {id:"trA13",day:"Mardi",    start:"18:00", end:"19:15", club:"tri", sport:"swim", activity:"Natation Jeunes tous niveaux", loc:"Les Vernets", verify:true},
     {id:"trA14",day:"Vendredi", start:"18:00", end:"19:30", club:"tri", sport:"run",  activity:"Course à pied (TRG & jeunes perf.)", loc:"Bout-du-monde", verify:true}
-  ];
+  ]);
 }
 
-let events = defaultEvents();
+let events = catalogEvents();
 let assignments = {};
 let editingId = null;
 let kidNames = {O:"O", L:"L"};
+let deletedIds = [];
 let fileSha = null;
 let plannerReady = false;
+let saveTimer = null;
+let saveInFlight = false;
+let saveQueued = false;
 
 const GH_OWNER = "infinitethinking";
 const GH_REPO = "kids";
 const GH_BRANCH = "main";
 const GH_DATA_PATH = "planner-data.json";
 const TOKEN_KEY = "kids-planner-gh-token";
-const LOCAL_KEY = "kids-planner-local-state";
+const LOCAL_KEY = "kids-planner-local-v2";
 
 function getToken(){
   return (document.getElementById("tokenInput")?.value || localStorage.getItem(TOKEN_KEY) || "").trim();
@@ -666,6 +684,7 @@ function snapshotState(updatedAt){
     updatedAt: updatedAt || new Date().toISOString(),
     assignments: compactAssignments,
     events: events.map(normalizeEvent),
+    deletedIds: deletedIds.slice(),
     kidNames: {O: kidLabel("O"), L: kidLabel("L")}
   };
 }
@@ -679,6 +698,76 @@ function newerState(a, b){
   if(!a) return b;
   if(!b) return a;
   return (a.updatedAt || "") >= (b.updatedAt || "") ? a : b;
+}
+
+function mergeEventLists(remoteEvents, localEvents, deleted){
+  const byId = new Map();
+  catalogEvents().forEach(e => byId.set(e.id, normalizeEvent(e)));
+  (remoteEvents || []).forEach(e => {
+    if(e && e.id) byId.set(e.id, normalizeEvent(e));
+  });
+  (localEvents || []).forEach(e => {
+    if(e && e.id) byId.set(e.id, normalizeEvent(e));
+  });
+  deleted.forEach(id => byId.delete(id));
+  catalogEvents().forEach(e => {
+    if(!deleted.has(e.id) && !byId.has(e.id)) byId.set(e.id, normalizeEvent(e));
+  });
+  return [...byId.values()];
+}
+
+function mergePlannerData(remote, local){
+  const deleted = new Set([
+    ...(Array.isArray(remote?.deletedIds) ? remote.deletedIds : []),
+    ...(Array.isArray(local?.deletedIds) ? local.deletedIds : [])
+  ]);
+  const kidSource = newerState(local, remote) || remote || local || {};
+  const names = kidSource.kidNames && typeof kidSource.kidNames === "object"
+    ? kidSource.kidNames
+    : {};
+  const assignmentsMerged = {
+    ...(remote?.assignments && typeof remote.assignments === "object" ? remote.assignments : {}),
+    ...(local?.assignments && typeof local.assignments === "object" ? local.assignments : {})
+  };
+  return {
+    version: 2,
+    updatedAt: (kidSource.updatedAt || new Date().toISOString()),
+    assignments: assignmentsMerged,
+    events: mergeEventLists(remote?.events, local?.events, deleted),
+    deletedIds: [...deleted],
+    kidNames: {
+      O: (names.O || names.o || "O").toString().trim() || "O",
+      L: (names.L || names.l || "L").toString().trim() || "L"
+    }
+  };
+}
+
+function scheduleSave(immediate){
+  touchLocal();
+  if(!plannerReady) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { autoSave(); }, immediate ? 200 : 800);
+}
+
+async function autoSave(){
+  if(!plannerReady || !getToken()) return;
+  if(saveInFlight){
+    saveQueued = true;
+    return;
+  }
+  saveInFlight = true;
+  try{
+    await saveRemoteState();
+    markSave(true);
+  }catch(err){
+    markSave(false, err.message || String(err));
+  }finally{
+    saveInFlight = false;
+    if(saveQueued){
+      saveQueued = false;
+      scheduleSave(true);
+    }
+  }
 }
 
 function updateKidChrome(){
@@ -763,17 +852,20 @@ function serializeState(){
 function applyState(data){
   if(!data) return;
   assignments = data.assignments && typeof data.assignments === "object" ? data.assignments : {};
+  deletedIds = Array.isArray(data.deletedIds) ? data.deletedIds.slice() : [];
   if(data.kidNames && typeof data.kidNames === "object"){
     kidNames = {
       O: (data.kidNames.O || data.kidNames.o || kidNames.O || "O").toString().trim() || "O",
       L: (data.kidNames.L || data.kidNames.l || kidNames.L || "L").toString().trim() || "L"
     };
   }
+  const deleted = new Set(deletedIds);
   if(Array.isArray(data.events) && data.events.length){
-    events = data.events.map(normalizeEvent);
+    events = mergeEventLists(data.events, null, deleted);
   }else{
     const byId = new Map(defaultEvents().map(e => [e.id, e]));
     const hidden = new Set(Array.isArray(data.hiddenIds) ? data.hiddenIds : []);
+    deleted.forEach(id => hidden.add(id));
     if(data.eventPatches && typeof data.eventPatches === "object"){
       Object.entries(data.eventPatches).forEach(([id, p]) => {
         const base = byId.get(id) || {id};
@@ -783,6 +875,9 @@ function applyState(data){
     if(Array.isArray(data.customEvents)){
       data.customEvents.forEach(e => byId.set(e.id, normalizeEvent(e)));
     }
+    catalogEvents().forEach(e => {
+      if(!hidden.has(e.id) && !byId.has(e.id)) byId.set(e.id, normalizeEvent(e));
+    });
     events = [...byId.values()].filter(e => !hidden.has(e.id));
   }
   fillKidNameInputs();
@@ -1189,7 +1284,7 @@ function attachHandlers(){
       const id = btn.dataset.id, kid = btn.dataset.kid;
       const a = getAssign(id);
       a[kid] = !a[kid];
-      touchLocal();
+      scheduleSave();
       render();
     };
   });
@@ -1197,8 +1292,10 @@ function attachHandlers(){
     btn.onclick = ()=>{
       flushEditFields();
       const id = btn.dataset.edit;
-      editingId = (editingId === id) ? null : id;
+      const closing = editingId === id;
+      editingId = closing ? null : id;
       render();
+      if(closing) scheduleSave(true);
     };
   });
   document.querySelectorAll('[data-field]').forEach(inp=>{
@@ -1206,7 +1303,7 @@ function attachHandlers(){
       updateEvent(inp.dataset.id, inp.dataset.field, inp.value, rerender);
     };
     inp.oninput = ()=> apply(false);
-    inp.onchange = ()=> apply(["day","club","sport"].includes(inp.dataset.field));
+    inp.onchange = ()=> apply(inp.dataset.field === "day");
   });
   document.querySelectorAll('[data-ics]').forEach(btn=>{
     btn.onclick = ()=>{
@@ -1224,7 +1321,7 @@ function attachHandlers(){
       const ev = findEvent(btn.dataset.optional);
       if(!ev) return;
       ev.optional = !ev.optional;
-      touchLocal();
+      scheduleSave();
       render();
     };
   });
@@ -1233,8 +1330,9 @@ function attachHandlers(){
       const id = btn.dataset.del;
       events = events.filter(e => e.id !== id);
       delete assignments[id];
+      if(!deletedIds.includes(id)) deletedIds.push(id);
       editingId = null;
-      touchLocal();
+      scheduleSave(true);
       render();
     };
   });
@@ -1267,7 +1365,7 @@ function updateEvent(id, field, value, rerender){
   const ev = findEvent(id);
   if(!ev) return;
   ev[field] = value;
-  touchLocal();
+  scheduleSave();
   if(rerender){
     render();
     const el = document.querySelector(`[data-field="${field}"][data-id="${id}"]`);
@@ -1279,12 +1377,13 @@ function updateEvent(id, field, value, rerender){
 
 function addSession(day){
   const id = 'custom_' + Date.now();
+  deletedIds = deletedIds.filter(x => x !== id);
   events.push({
     id, day, start:"18:00", end:"19:00",
     club:"tri", sport:"swim", activity:"Nouvelle séance", loc:"", optional:false
   });
   editingId = id;
-  touchLocal();
+  scheduleSave(true);
   render();
 }
 
@@ -1318,13 +1417,13 @@ document.getElementById('kidNameO').addEventListener('input', ()=>{
   readKidNamesFromInputs();
   updateKidChrome();
   refreshKidLabels("O");
-  touchLocal();
+  scheduleSave();
 });
 document.getElementById('kidNameL').addEventListener('input', ()=>{
   readKidNamesFromInputs();
   updateKidChrome();
   refreshKidLabels("L");
-  touchLocal();
+  scheduleSave();
 });
 
 document.getElementById('tokenInput').addEventListener('input', syncTokenChrome);
@@ -1357,6 +1456,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
 (async function init(){
   const saveBtn = document.getElementById('saveBtn');
   saveBtn.disabled = true;
+  let restoredCatalog = false;
   try{
     let remote = null;
     try{
@@ -1365,15 +1465,19 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
     }catch(err){
       markSave(false, err.message || String(err));
     }
-    const chosen = newerState(loadLocalState(), remote);
-    if(chosen) applyState(chosen);
+    const local = loadLocalState();
+    const merged = mergePlannerData(remote, local);
+    applyState(merged);
     readKidNamesFromInputs();
     fillKidNameInputs();
-    if(chosen) persistLocal(snapshotState(chosen.updatedAt));
+    persistLocal(snapshotState(merged.updatedAt));
+    const remoteIds = new Set((remote?.events || []).map(e => e.id));
+    restoredCatalog = catalogEvents().some(e => !remoteIds.has(e.id) && !deletedIds.includes(e.id));
   }finally{
     plannerReady = true;
     saveBtn.disabled = false;
     render();
+    if(restoredCatalog) scheduleSave(true);
   }
 })();
 </script>
