@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Planning entraînements — O & L</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon.png" type="image/png">
@@ -30,12 +31,21 @@
     --warn:#c0392b;
   }
   *{box-sizing:border-box;}
+  html{
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+  }
   body{
     margin:0;
     font-family:'Helvetica Neue',Arial,sans-serif;
     background:var(--paper);
     color:var(--ink);
     padding:28px 20px 60px;
+    padding-left:max(20px, env(safe-area-inset-left));
+    padding-right:max(20px, env(safe-area-inset-right));
+    padding-bottom:max(60px, env(safe-area-inset-bottom));
+    overflow-x:hidden;
+    touch-action:manipulation;
   }
   h1{
     font-size:22px;
@@ -47,7 +57,9 @@
     font-size:13px;
     color:#6b6357;
     margin-bottom:18px;
+    line-height:1.45;
   }
+  .hint-mobile{display:none;}
 
   .toolbar{
     display:flex;
@@ -135,12 +147,13 @@
     right:0;
     width:min(360px,100%);
     height:100%;
+    height:100dvh;
     background:var(--paper);
     z-index:50;
     transform:translateX(100%);
     transition:transform 0.2s ease;
     box-shadow:-8px 0 24px rgba(27,36,48,0.16);
-    padding:18px 18px 32px;
+    padding:18px 18px max(32px, env(safe-area-inset-bottom));
     overflow:auto;
   }
   .drawer.open{transform:translateX(0);}
@@ -559,16 +572,73 @@
   .kid-chip.O{background:var(--o-color);}
   .kid-chip.L{background:var(--l-color);}
 
+  @media (max-width:1100px){
+    .grid{grid-template-columns:repeat(3,1fr);}
+  }
   @media (max-width:900px){
-    .grid{grid-template-columns:repeat(2,1fr);}
     .summary{grid-template-columns:1fr;}
+  }
+  @media (max-width:800px){
+    .grid{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width:700px), (hover: none) and (pointer: coarse){
+    .hint-desktop{display:none;}
+    .hint-mobile{display:inline;}
+  }
+  @media (max-width:640px){
+    body{
+      padding:14px 12px 48px;
+      padding-left:max(12px, env(safe-area-inset-left));
+      padding-right:max(12px, env(safe-area-inset-right));
+      padding-bottom:max(48px, env(safe-area-inset-bottom));
+    }
+    h1{font-size:19px;}
+    .grid{grid-template-columns:1fr;}
+    .toolbar{align-items:flex-start;}
+    .sync-status{max-width:none;}
+    .legend{font-size:12px; gap:10px;}
+    .icon-btn{width:44px;height:44px;}
+    .day-col-head .icon-btn{width:40px;height:40px;}
+    .card-actions .icon-btn{width:36px;height:36px;}
+    .card-actions .icon-btn .material-symbols-outlined{font-size:20px;}
+    .event{padding:10px 10px 12px; cursor:pointer;}
+    .event-head{padding-right:112px;}
+    .kid-btn{padding:10px 8px;font-size:13px;min-height:40px;}
+    .modal-overlay{
+      padding:0;
+      align-items:flex-end;
+    }
+    .edit-dialog{
+      width:100%;
+      max-height:min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px)));
+      border-radius:16px 16px 0 0;
+      padding-bottom:env(safe-area-inset-bottom);
+    }
+    .modal-form input,
+    .modal-form select,
+    .drawer-field input{
+      font-size:16px;
+      min-height:44px;
+    }
+    .text-btn{
+      min-height:44px;
+      padding:10px 16px;
+    }
+    .drawer{
+      width:100%;
+      padding-top:max(18px, env(safe-area-inset-top));
+    }
+  }
+  @media (hover: none) and (pointer: coarse){
+    .event{cursor:pointer;}
+    .event:hover{filter:none;}
   }
 </style>
 </head>
 <body>
 
 <h1 id="pageTitle">Planning hebdomadaire — O &amp; L</h1>
-<div class="sub" id="pageSub">Clique sur un enfant pour l'assigner. Glisse une séance vers un autre jour, ou double-clique pour la modifier.</div>
+<div class="sub" id="pageSub">Clique sur un enfant pour l'assigner. <span class="hint-desktop">Glisse une séance vers un autre jour, ou double-clique pour la modifier.</span><span class="hint-mobile">Touche une séance pour la modifier, ou change le jour dans le formulaire.</span></div>
 
 <div class="toolbar">
   <div class="legend">
@@ -1001,7 +1071,7 @@ function updateKidChrome(){
   const titleO = document.getElementById("titleO");
   const titleL = document.getElementById("titleL");
   if(title) title.textContent = `Planning hebdomadaire — ${o} & ${l}`;
-  if(sub) sub.textContent = `Clique sur ${o} / ${l} pour l'assigner. Glisse une séance vers un autre jour, ou double-clique pour la modifier.`;
+  if(sub) sub.innerHTML = `Clique sur ${esc(o)} / ${esc(l)} pour l'assigner. <span class="hint-desktop">Glisse une séance vers un autre jour, ou double-clique pour la modifier.</span><span class="hint-mobile">Touche une séance pour la modifier, ou change le jour dans le formulaire.</span>`;
   if(titleO) titleO.textContent = `Séances de ${o}`;
   if(titleL) titleL.textContent = `Séances de ${l}`;
 }
@@ -1458,8 +1528,10 @@ function render(){
       const div = document.createElement('div');
       div.className = `event club-${club.id}` + (ev.optional ? ' optional' : '') + ((cO||cL) ? ' conflict' : '');
       div.dataset.id = ev.id;
-      div.draggable = true;
-      div.title = "Glisse vers un autre jour, ou double-clique pour modifier";
+      div.draggable = canDragCards();
+      div.title = canDragCards()
+        ? "Glisse vers un autre jour, ou double-clique pour modifier"
+        : "Touche pour modifier";
       div.innerHTML = `
         <div class="card-actions">
           <button class="icon-btn" data-ics="${ev.id}" type="button" title="Télécharger le calendrier" aria-label="Télécharger le calendrier">
@@ -1542,6 +1614,10 @@ function renderSummary(){
   });
 }
 
+function canDragCards(){
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+}
+
 function bindGridOnce(){
   const grid = document.getElementById("grid");
   grid.addEventListener("click", onGridClick);
@@ -1561,6 +1637,10 @@ function clearDropTargets(){
 }
 
 function onCardDragStart(e){
+  if(!canDragCards()){
+    e.preventDefault();
+    return;
+  }
   const t = e.target;
   if(!(t instanceof Element)) return;
   if(t.closest("button, a, input, select, textarea")){
@@ -1669,6 +1749,13 @@ function onGridClick(e){
     a[which] = !a[which];
     scheduleSave();
     render();
+    return;
+  }
+  if(!canDragCards()){
+    const card = t.closest(".event");
+    if(card && !t.closest("button")){
+      openEditModal(card.getAttribute("data-id"));
+    }
   }
 }
 
