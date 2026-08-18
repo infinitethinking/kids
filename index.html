@@ -211,6 +211,11 @@
     border-radius:10px;
     padding:10px;
     min-height:120px;
+    transition:background 0.12s ease, box-shadow 0.12s ease;
+  }
+  .day-col.drop-target{
+    background:#eef3ea;
+    box-shadow:inset 0 0 0 2px #9a9488;
   }
   .day-col-head{
     display:flex;
@@ -242,10 +247,14 @@
     font-size:12px;
     border:1px solid transparent;
     position:relative;
-    cursor:pointer;
+    cursor:grab;
   }
   .event:hover{
     filter:brightness(0.98);
+  }
+  .event.dragging{
+    opacity:0.35;
+    cursor:grabbing;
   }
   .event.club-tri{background:var(--tri-bg);border-color:#bcd9e0;}
   .event.club-bmx{background:var(--bmx-bg);border-color:#e3bda6;}
@@ -320,6 +329,10 @@
     cursor:pointer;
     color:#8a8271;
     min-width:0;
+  }
+  .card-actions .icon-btn,
+  .kid-btn{
+    cursor:pointer;
   }
   .kid-btn.on-O{background:var(--o-color);border-color:var(--o-color);color:#fff;}
   .kid-btn.on-L{background:var(--l-color);border-color:var(--l-color);color:#fff;}
@@ -547,7 +560,7 @@
 <body>
 
 <h1 id="pageTitle">Planning hebdomadaire — O &amp; L</h1>
-<div class="sub" id="pageSub">Clique sur un enfant pour l'assigner. Double-clique une séance — ou l'icône crayon — pour la modifier.</div>
+<div class="sub" id="pageSub">Clique sur un enfant pour l'assigner. Glisse une séance vers un autre jour, ou double-clique pour la modifier.</div>
 
 <div class="toolbar">
   <div class="legend">
@@ -947,7 +960,7 @@ function updateKidChrome(){
   const titleO = document.getElementById("titleO");
   const titleL = document.getElementById("titleL");
   if(title) title.textContent = `Planning hebdomadaire — ${o} & ${l}`;
-  if(sub) sub.textContent = `Clique sur ${o} / ${l} pour l'assigner. Double-clique une séance — ou le crayon — pour la modifier.`;
+  if(sub) sub.textContent = `Clique sur ${o} / ${l} pour l'assigner. Glisse une séance vers un autre jour, ou double-clique pour la modifier.`;
   if(titleO) titleO.textContent = `Séances de ${o}`;
   if(titleL) titleL.textContent = `Séances de ${l}`;
 }
@@ -1354,6 +1367,7 @@ function render(){
   DAYS.forEach(day=>{
     const col = document.createElement('div');
     col.className = 'day-col';
+    col.dataset.day = day;
     const dayEvents = events.filter(e=>e.day===day).sort((a,b)=>toMinutes(a.start)-toMinutes(b.start));
 
     let html = `<div class="day-col-head">
@@ -1377,7 +1391,8 @@ function render(){
       const div = document.createElement('div');
       div.className = `event club-${club.id}` + (ev.optional ? ' optional' : '') + ((cO||cL) ? ' conflict' : '');
       div.dataset.id = ev.id;
-      div.title = "Double-clique pour modifier";
+      div.draggable = true;
+      div.title = "Glisse vers un autre jour, ou double-clique pour modifier";
       div.innerHTML = `
         <div class="card-actions">
           <button class="icon-btn" data-ics="${ev.id}" type="button" title="Télécharger le calendrier" aria-label="Télécharger le calendrier">
@@ -1464,6 +1479,81 @@ function bindGridOnce(){
   const grid = document.getElementById("grid");
   grid.addEventListener("click", onGridClick);
   grid.addEventListener("dblclick", onGridDblClick);
+  grid.addEventListener("dragstart", onCardDragStart);
+  grid.addEventListener("dragend", onCardDragEnd);
+  grid.addEventListener("dragover", onCardDragOver);
+  grid.addEventListener("dragleave", onCardDragLeave);
+  grid.addEventListener("drop", onCardDrop);
+}
+
+let dragEventId = null;
+let draggedThisGesture = false;
+
+function clearDropTargets(){
+  document.querySelectorAll(".day-col.drop-target").forEach(col => col.classList.remove("drop-target"));
+}
+
+function onCardDragStart(e){
+  const t = e.target;
+  if(!(t instanceof Element)) return;
+  if(t.closest("button, a, input, select, textarea")){
+    e.preventDefault();
+    return;
+  }
+  const card = t.closest(".event");
+  if(!card || !e.dataTransfer){
+    e.preventDefault();
+    return;
+  }
+  dragEventId = card.getAttribute("data-id");
+  draggedThisGesture = false;
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", dragEventId || "");
+  card.classList.add("dragging");
+}
+
+function onCardDragEnd(){
+  clearDropTargets();
+  document.querySelectorAll(".event.dragging").forEach(card => card.classList.remove("dragging"));
+  setTimeout(() => {
+    draggedThisGesture = false;
+    dragEventId = null;
+  }, 0);
+}
+
+function onCardDragOver(e){
+  const col = e.target instanceof Element ? e.target.closest(".day-col") : null;
+  if(!col || !dragEventId) return;
+  e.preventDefault();
+  if(e.dataTransfer) e.dataTransfer.dropEffect = "move";
+  if(!col.classList.contains("drop-target")){
+    clearDropTargets();
+    col.classList.add("drop-target");
+  }
+}
+
+function onCardDragLeave(e){
+  const col = e.target instanceof Element ? e.target.closest(".day-col") : null;
+  if(!col) return;
+  const next = e.relatedTarget instanceof Element ? e.relatedTarget : null;
+  if(next && col.contains(next)) return;
+  col.classList.remove("drop-target");
+}
+
+function onCardDrop(e){
+  const col = e.target instanceof Element ? e.target.closest(".day-col") : null;
+  if(!col) return;
+  e.preventDefault();
+  const day = col.getAttribute("data-day");
+  const id = dragEventId || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
+  const ev = findEvent(id);
+  clearDropTargets();
+  if(!ev || !day) return;
+  draggedThisGesture = true;
+  if(ev.day === day) return;
+  ev.day = day;
+  scheduleSave(true);
+  render();
 }
 
 function onGridClick(e){
@@ -1516,6 +1606,7 @@ function onGridClick(e){
 }
 
 function onGridDblClick(e){
+  if(draggedThisGesture) return;
   const t = e.target;
   if(!(t instanceof Element)) return;
   if(t.closest(".kid-btn, .card-actions, [data-add-day]")) return;
