@@ -85,6 +85,41 @@
     font-weight:600;
   }
   .add-btn:hover{opacity:0.85;}
+  .add-btn:disabled{opacity:0.5;cursor:wait;}
+
+  .save-bar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+    width:100%;
+  }
+  .save-bar input[type="password"]{
+    font-size:13px;
+    padding:8px 12px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    min-width:220px;
+    flex:1;
+    max-width:360px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .save-status{
+    font-size:12.5px;
+    color:#6b6357;
+  }
+  .save-status.ok{color:var(--athle);}
+  .save-status.err{color:var(--warn);}
+  .link-btn{
+    background:none;
+    border:none;
+    color:#6b6357;
+    font-size:12px;
+    cursor:pointer;
+    text-decoration:underline;
+    padding:0;
+  }
 
   .notice{
     font-size:12.5px;
@@ -294,11 +329,24 @@
   </div>
   <button class="add-btn" id="addEventBtn">+ Ajouter une séance</button>
   <button class="add-btn" id="resetBtn" style="background:#fff;color:var(--ink);">↺ Réafficher les séances supprimées</button>
+  <div class="save-bar">
+    <input type="password" id="tokenInput" placeholder="Jeton GitHub (Contents: write)" autocomplete="off" spellcheck="false">
+    <button class="add-btn" id="saveBtn">Enregistrer</button>
+    <button class="link-btn" id="forgetTokenBtn" type="button">Oublier le jeton</button>
+    <span class="save-status" id="saveStatus"></span>
+  </div>
   <div class="legend">
     <span><i class="swatch" style="background:var(--tri)"></i>Triathlon</span>
     <span><i class="swatch" style="background:var(--bmx)"></i>BMX</span>
     <span><i class="swatch" style="background:var(--athle)"></i>Athlétisme</span>
   </div>
+</div>
+
+<div class="notice" id="saveHint">
+  Les changements (O/L, horaires, séances ajoutées) ne sont partagés que lorsque tu cliques <strong>Enregistrer</strong>.
+  Crée un jeton fine-grained pour le dépôt <code>kids</code>, permission <code>Contents: Read and write</code>,
+  colle-le ci-dessus une fois (il reste dans ce navigateur, pas dans le dépôt), puis enregistre.
+  <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Créer un jeton</a>
 </div>
 
 <div class="grid" id="grid"></div>
@@ -375,6 +423,153 @@ let assignments = {}; // eventId -> {O:bool, L:bool}
 let customEvents = []; // user-added events, persists across season toggle (tagged with season:"A"/"B"/"both")
 let editingId = null;
 let hiddenIds = new Set(); // ids of built-in sessions the user removed from view
+
+const GH_OWNER = "infinitethinking";
+const GH_REPO = "kids";
+const GH_BRANCH = "main";
+const GH_DATA_PATH = "planner-data.json";
+const TOKEN_KEY = "kids-planner-gh-token";
+const PATCH_FIELDS = ["day","start","end","activity","loc","type"];
+
+function getToken(){
+  return (document.getElementById("tokenInput")?.value || localStorage.getItem(TOKEN_KEY) || "").trim();
+}
+
+function setStatus(msg, kind){
+  const el = document.getElementById("saveStatus");
+  if(!el) return;
+  el.textContent = msg;
+  el.className = "save-status" + (kind ? " "+kind : "");
+}
+
+function encodeBase64(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+
+function decodeBase64(b64){
+  const bin = atob(b64.replace(/\n/g, ""));
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+function githubHeaders(withAuth){
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+  const token = getToken();
+  if(withAuth && token) headers.Authorization = "Bearer " + token;
+  return headers;
+}
+
+function collectEventPatches(){
+  const patches = {};
+  [...fixedEvents, ...triSeasonA, ...triSeasonB].forEach(e => {
+    patches[e.id] = {
+      day: e.day, start: e.start, end: e.end,
+      activity: e.activity, loc: e.loc || "", type: e.type
+    };
+  });
+  return patches;
+}
+
+function applyEventPatches(patches){
+  if(!patches) return;
+  Object.entries(patches).forEach(([id, p]) => {
+    const arr = findEventArray(id);
+    if(!arr) return;
+    const ev = arr.find(e => e.id === id);
+    if(!ev) return;
+    PATCH_FIELDS.forEach(k => {
+      if(p[k] !== undefined) ev[k] = p[k];
+    });
+  });
+}
+
+function serializeState(){
+  const compactAssignments = {};
+  Object.entries(assignments).forEach(([id, a]) => {
+    if(a && (a.O || a.L)) compactAssignments[id] = {O: !!a.O, L: !!a.L};
+  });
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    season,
+    assignments: compactAssignments,
+    customEvents,
+    hiddenIds: [...hiddenIds],
+    eventPatches: collectEventPatches()
+  };
+}
+
+function applyState(data){
+  if(!data) return;
+  season = data.season === "B" ? "B" : "A";
+  assignments = data.assignments && typeof data.assignments === "object" ? data.assignments : {};
+  customEvents = Array.isArray(data.customEvents) ? data.customEvents : [];
+  hiddenIds = new Set(Array.isArray(data.hiddenIds) ? data.hiddenIds : []);
+  applyEventPatches(data.eventPatches);
+}
+
+async function fetchRemoteState(){
+  const res = await fetch(
+    `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${encodeURIComponent(GH_DATA_PATH)}?ref=${GH_BRANCH}`,
+    { headers: githubHeaders(true) }
+  );
+  if(res.status === 404) return { sha: null, data: null };
+  if(!res.ok){
+    const body = await res.text();
+    throw new Error(`Lecture GitHub ${res.status}: ${body}`);
+  }
+  const json = await res.json();
+  const text = decodeBase64(json.content || "");
+  return { sha: json.sha, data: text ? JSON.parse(text) : null };
+}
+
+async function saveRemoteState(){
+  const token = getToken();
+  if(!token){
+    throw new Error("Colle un jeton GitHub avec Contents: Read and write, puis réessaie.");
+  }
+  localStorage.setItem(TOKEN_KEY, token);
+
+  const payload = JSON.stringify(serializeState(), null, 2) + "\n";
+  const content = encodeBase64(payload);
+
+  async function put(sha){
+    const body = {
+      message: "Update planner assignments",
+      content,
+      branch: GH_BRANCH
+    };
+    if(sha) body.sha = sha;
+    return fetch(
+      `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${encodeURIComponent(GH_DATA_PATH)}`,
+      {
+        method: "PUT",
+        headers: { ...githubHeaders(true), "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }
+    );
+  }
+
+  let { sha } = await fetchRemoteState();
+  let res = await put(sha);
+  if(res.status === 409){
+    ({ sha } = await fetchRemoteState());
+    res = await put(sha);
+  }
+  if(res.status === 401 || res.status === 403){
+    throw new Error("Jeton refusé. Vérifie qu'il a Contents: Read and write sur infinitethinking/kids.");
+  }
+  if(!res.ok){
+    const body = await res.text();
+    throw new Error(`Enregistrement ${res.status}: ${body}`);
+  }
+}
 
 function toMinutes(t){
   const [h,m] = t.split(":").map(Number);
@@ -582,7 +777,37 @@ document.getElementById('addEventBtn').addEventListener('click', ()=>{
   render();
 });
 
-render();
+document.getElementById('tokenInput').value = localStorage.getItem(TOKEN_KEY) || "";
+
+document.getElementById('forgetTokenBtn').addEventListener('click', ()=>{
+  localStorage.removeItem(TOKEN_KEY);
+  document.getElementById('tokenInput').value = "";
+  setStatus("Jeton oublié sur cet appareil.");
+});
+
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  setStatus("Enregistrement…");
+  try{
+    await saveRemoteState();
+    setStatus("Enregistré. Visible sur les autres appareils après rechargement.", "ok");
+  }catch(err){
+    setStatus(err.message || String(err), "err");
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+(async function init(){
+  try{
+    const { data } = await fetchRemoteState();
+    if(data) applyState(data);
+  }catch(err){
+    setStatus("Chargement distant impossible: " + (err.message || String(err)), "err");
+  }
+  render();
+})();
 </script>
 </body>
 </html>
