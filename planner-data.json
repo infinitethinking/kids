@@ -1,8 +1,282 @@
 {
   "version": 1,
+  "updatedAt": "2026-08-18T09:50:46.119Z",
   "season": "A",
   "assignments": {},
   "customEvents": [],
   "hiddenIds": [],
-  "eventPatches": {}
+  "eventPatches": {
+    "bmx1": {
+      "day": "Lundi",
+      "start": "17:45",
+      "end": "19:15",
+      "activity": "BMX",
+      "loc": "",
+      "type": "bmx"
+    },
+    "bmx2": {
+      "day": "Mercredi",
+      "start": "14:00",
+      "end": "16:00",
+      "activity": "BMX",
+      "loc": "",
+      "type": "bmx"
+    },
+    "ath1": {
+      "day": "Mercredi",
+      "start": "14:00",
+      "end": "16:00",
+      "activity": "Athlétisme",
+      "loc": "",
+      "type": "athle"
+    },
+    "ath2": {
+      "day": "Mercredi",
+      "start": "16:00",
+      "end": "18:00",
+      "activity": "Athlétisme",
+      "loc": "",
+      "type": "athle"
+    },
+    "ath3": {
+      "day": "Vendredi",
+      "start": "18:00",
+      "end": "20:00",
+      "activity": "Athlétisme",
+      "loc": "",
+      "type": "athle"
+    },
+    "trA1": {
+      "day": "Lundi",
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "PPG (TRG & Jeunes perf.)",
+      "loc": "Les Vernets ou lac",
+      "type": "tri"
+    },
+    "trA2": {
+      "day": "Mardi",
+      "start": "13:00",
+      "end": "14:30",
+      "activity": "Natation TRG",
+      "loc": "Marignac",
+      "type": "tri"
+    },
+    "trA3": {
+      "day": "Mercredi",
+      "start": "14:00",
+      "end": "15:00",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Chandieu",
+      "type": "tri"
+    },
+    "trA4": {
+      "day": "Jeudi",
+      "start": "13:00",
+      "end": "14:30",
+      "activity": "Natation TRG",
+      "loc": "Marignac",
+      "type": "tri"
+    },
+    "trA5": {
+      "day": "Vendredi",
+      "start": "13:00",
+      "end": "14:30",
+      "activity": "Natation TRG",
+      "loc": "Marignac",
+      "type": "tri"
+    },
+    "trA6": {
+      "day": "Samedi",
+      "start": "11:00",
+      "end": "12:30",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Pâquis centre",
+      "type": "tri"
+    },
+    "trA7": {
+      "day": "Lundi",
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Les Vernets ou lac",
+      "type": "tri"
+    },
+    "trA8": {
+      "day": "Mardi",
+      "start": "18:00",
+      "end": "19:30",
+      "activity": "Course à pied Jeunes tous niveaux",
+      "loc": "Bout-du-monde",
+      "type": "tri"
+    },
+    "trA9": {
+      "day": "Mercredi",
+      "start": "16:15",
+      "end": "18:15",
+      "activity": "Vélo (TRG & jeunes perf.)",
+      "loc": "Bout-du-monde",
+      "type": "tri"
+    },
+    "trA10": {
+      "day": "Jeudi",
+      "start": "18:00",
+      "end": "19:30",
+      "activity": "Transitions Jeunes tous niveaux (VTT/CAP)",
+      "loc": "Bout-du-monde",
+      "type": "tri"
+    },
+    "trA11": {
+      "day": "Vendredi",
+      "start": "19:00",
+      "end": "20:00",
+      "activity": "Natation (TRG & Jeunes perf.)",
+      "loc": "Les Vernets ou lac",
+      "type": "tri"
+    },
+    "trA12": {
+      "day": "Samedi",
+      "start": "18:30",
+      "end": "20:00",
+      "activity": "Transitions (TRG & jeunes perf.)",
+      "loc": "CO Marais",
+      "type": "tri"
+    },
+    "trA13": {
+      "day": "Mardi",
+      "start": "18:00",
+      "end": "19:15",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Les Vernets",
+      "type": "tri"
+    },
+    "trA14": {
+      "day": "Vendredi",
+      "start": "18:00",
+      "end": "19:30",
+      "activity": "Course à pied (TRG & jeunes perf.)",
+      "loc": "Bout-du-monde",
+      "type": "tri"
+    },
+    "trB1": {
+      "day": "Lundi",
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "PPG (TRG & Jeunes perf.)",
+      "loc": "Les Vernets",
+      "type": "tri"
+    },
+    "trB2": {
+      "day": "Mardi",
+      "start": "13:00",
+      "end": "14:30",
+      "activity": "Natation TRG",
+      "loc": "Marignac",
+      "type": "tri"
+    },
+    "trB3": {
+      "day": "Mercredi",
+      "start": "14:00",
+      "end": "15:00",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Chandieu",
+      "type": "tri"
+    },
+    "trB4": {
+      "day": "Jeudi",
+      "start": "13:00",
+      "end": "14:30",
+      "activity": "Natation TRG",
+      "loc": "Marignac",
+      "type": "tri"
+    },
+    "trB5": {
+      "day": "Vendredi",
+      "start": "13:00",
+      "end": "14:30",
+      "activity": "Natation TRG",
+      "loc": "Marignac",
+      "type": "tri"
+    },
+    "trB6": {
+      "day": "Samedi",
+      "start": "11:00",
+      "end": "12:30",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Pâquis centre",
+      "type": "tri"
+    },
+    "trB7": {
+      "day": "Lundi",
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Les Vernets",
+      "type": "tri"
+    },
+    "trB8": {
+      "day": "Mardi",
+      "start": "18:00",
+      "end": "19:30",
+      "activity": "Course à pied Jeunes tous niveaux",
+      "loc": "Bout-du-monde",
+      "type": "tri"
+    },
+    "trB9": {
+      "day": "Mercredi",
+      "start": "14:00",
+      "end": "16:00",
+      "activity": "Vélo au vélodrome (Jeunes tous niveaux)",
+      "loc": "Vélodrome de Genève",
+      "type": "tri"
+    },
+    "trB10": {
+      "day": "Jeudi",
+      "start": "18:00",
+      "end": "19:30",
+      "activity": "Course à pied Jeunes tous niveaux",
+      "loc": "Bout-du-monde",
+      "type": "tri"
+    },
+    "trB11": {
+      "day": "Vendredi",
+      "start": "19:00",
+      "end": "20:00",
+      "activity": "Natation (TRG & Jeunes perf.)",
+      "loc": "Les Vernets",
+      "type": "tri"
+    },
+    "trB12": {
+      "day": "Samedi",
+      "start": "18:00",
+      "end": "19:30",
+      "activity": "Course à pied (TRG & jeunes perf.)",
+      "loc": "Bout-du-monde",
+      "type": "tri"
+    },
+    "trB13": {
+      "day": "Mercredi",
+      "start": "15:00",
+      "end": "16:00",
+      "activity": "Powerwatt Vélo (TRG & jeunes perf.)",
+      "loc": "PowerWatt Genève",
+      "type": "tri"
+    },
+    "trB14": {
+      "day": "Vendredi",
+      "start": "18:00",
+      "end": "19:30",
+      "activity": "Course à pied (TRG & jeunes perf.)",
+      "loc": "Bout-du-monde",
+      "type": "tri"
+    },
+    "trB15": {
+      "day": "Mardi",
+      "start": "18:00",
+      "end": "19:15",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Les Vernets",
+      "type": "tri"
+    }
+  }
 }
