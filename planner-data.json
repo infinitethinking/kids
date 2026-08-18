@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updatedAt": "2026-08-18T13:32:36.189Z",
+  "updatedAt": "2026-08-18T13:48:55.037Z",
   "assignments": {},
   "events": [
     {
@@ -86,22 +86,10 @@
       "sport": "swim",
       "verify": false,
       "optional": false
-    },
-    {
-      "id": "custom_1787059920196",
-      "day": "Vendredi",
-      "start": "18:00",
-      "end": "19:00",
-      "activity": "Nouvelle séance",
-      "loc": "",
-      "club": "tri",
-      "sport": "swim",
-      "verify": false,
-      "optional": false
     }
   ],
   "kidNames": {
-    "O": "Olivia",
-    "L": "Leo"
+    "O": "OLIVIA",
+    "L": "LEO"
   }
 }
