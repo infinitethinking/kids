@@ -15,12 +15,12 @@
     --ink:#1b2430;
     --paper:#f6f4ee;
     --line:#d9d3c4;
-    --tri:#1f6f8b;      /* triathlon - deep teal blue */
+    --tri:#1f6f8b;      /* TriGenève */
     --tri-bg:#e4f0f3;
-    --bmx:#c0522d;      /* bmx - rust orange */
+    --bmx:#c0522d;      /* BMX */
     --bmx-bg:#f7e6dc;
-    --athle:#5a7a3a;    /* athlétisme - moss green */
-    --athle-bg:#e9f0e1;
+    --stade:#5a7a3a;    /* Stade Genève */
+    --stade-bg:#e9f0e1;
     --o-color:#a7351e;  /* kid O tag */
     --l-color:#1e4f9e;  /* kid L tag */
     --warn:#c0392b;
@@ -51,25 +51,6 @@
     gap:10px;
     align-items:center;
     margin-bottom:18px;
-  }
-  .season-toggle{
-    display:inline-flex;
-    border:1px solid var(--ink);
-    border-radius:999px;
-    overflow:hidden;
-  }
-  .season-toggle button{
-    border:none;
-    background:transparent;
-    padding:8px 16px;
-    font-size:13px;
-    cursor:pointer;
-    color:var(--ink);
-    font-weight:600;
-  }
-  .season-toggle button.active{
-    background:var(--ink);
-    color:var(--paper);
   }
   .legend{
     display:flex;
@@ -244,9 +225,25 @@
     border:1px solid transparent;
     position:relative;
   }
-  .event.tri{background:var(--tri-bg);border-color:#bcd9e0;}
-  .event.bmx{background:var(--bmx-bg);border-color:#e3bda6;}
-  .event.athle{background:var(--athle-bg);border-color:#c6d8b4;}
+  .event.club-tri{background:var(--tri-bg);border-color:#bcd9e0;}
+  .event.club-bmx{background:var(--bmx-bg);border-color:#e3bda6;}
+  .event.club-stade{background:var(--stade-bg);border-color:#c6d8b4;}
+
+  .event-head{
+    display:flex;
+    align-items:flex-start;
+    gap:6px;
+    padding-right:18px;
+  }
+  .sport-icon{
+    font-size:18px;
+    line-height:1;
+    margin-top:1px;
+  }
+  .event.club-tri .sport-icon{color:var(--tri);}
+  .event.club-bmx .sport-icon{color:var(--bmx);}
+  .event.club-stade .sport-icon{color:var(--stade);}
+  .event-head .time{flex:1;}
 
   .event .time{
     font-weight:700;
@@ -331,7 +328,10 @@
     font-size:12.5px;
     line-height:1.6;
   }
-  .summary li.conflict-item{color:var(--warn);font-weight:700;}
+  .summary li .material-symbols-outlined{
+    font-size:15px;
+    vertical-align:-3px;
+  }
   .empty{color:#8a8271;font-size:12.5px;}
 
   .week-summary{margin-top:30px;}
@@ -361,9 +361,16 @@
     padding-left:8px;
     border-left:3px solid var(--tri);
   }
-  .day-summary-item.bmx{border-left-color:var(--bmx);}
-  .day-summary-item.athle{border-left-color:var(--athle);}
-  .day-summary-item .t{font-weight:700;}
+  .day-summary-item.club-tri{border-left-color:var(--tri);}
+  .day-summary-item.club-bmx{border-left-color:var(--bmx);}
+  .day-summary-item.club-stade{border-left-color:var(--stade);}
+  .day-summary-item .t{
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+  .day-summary-item .t .material-symbols-outlined{font-size:16px;}
   .day-summary-item .a{margin-top:1px;}
   .day-summary-item .kids{margin-top:3px;display:flex;gap:5px;}
   .kid-chip{
@@ -385,18 +392,11 @@
 <body>
 
 <h1 id="pageTitle">Planning hebdomadaire — O &amp; L</h1>
-<div class="sub" id="pageSub">Triathlon (TCG), BMX et Athlétisme — clique sur O / L sur une séance pour l'assigner. Utilise l'icône modifier pour corriger un jour/horaire si besoin (l'extraction du PDF n'est pas garantie à 100%).</div>
+<div class="sub" id="pageSub">Clique sur un enfant pour l'assigner à une séance. Utilise l'icône modifier pour le club, le sport, le jour ou l'horaire.</div>
 
 <div class="toolbar">
-  <div class="season-toggle" id="seasonToggle">
-    <button data-season="A" class="active">Mai–Juin / Rentrée–mi-Sept</button>
-    <button data-season="B">Mi-Sept → Avril (hiver)</button>
-  </div>
   <button class="icon-btn" id="addEventBtn" type="button" title="Ajouter une séance" aria-label="Ajouter une séance">
     <span class="material-symbols-outlined">calendar_add_on</span>
-  </button>
-  <button class="icon-btn ghost" id="resetBtn" type="button" title="Réafficher les séances supprimées" aria-label="Réafficher les séances supprimées">
-    <span class="material-symbols-outlined">restart_alt</span>
   </button>
   <div class="save-bar">
     <button class="icon-btn ghost" id="settingsBtn" type="button" title="Réglages" aria-label="Réglages" aria-expanded="false" aria-controls="settingsDrawer">
@@ -407,9 +407,9 @@
     </button>
   </div>
   <div class="legend">
-    <span><i class="swatch" style="background:var(--tri)"></i>Triathlon</span>
     <span><i class="swatch" style="background:var(--bmx)"></i>BMX</span>
-    <span><i class="swatch" style="background:var(--athle)"></i>Athlétisme</span>
+    <span><i class="swatch" style="background:var(--tri)"></i>TriGenève</span>
+    <span><i class="swatch" style="background:var(--stade)"></i>Stade Genève</span>
   </div>
 </div>
 
@@ -460,69 +460,52 @@
 
 <script>
 const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
-
-// ---- Fixed clubs (given directly by user, not from PDF) ----
-const fixedEvents = [
-  {id:"bmx1", day:"Lundi",   start:"17:45", end:"19:15", type:"bmx",   activity:"BMX", loc:"", verify:false},
-  {id:"bmx2", day:"Mercredi",start:"14:00", end:"16:00", type:"bmx",   activity:"BMX", loc:"", verify:false},
-  {id:"ath1", day:"Mercredi",start:"14:00", end:"16:00", type:"athle", activity:"Athlétisme", loc:"", verify:false},
-  {id:"ath2", day:"Mercredi",start:"16:00", end:"18:00", type:"athle", activity:"Athlétisme", loc:"", verify:false},
-  {id:"ath3", day:"Vendredi",start:"18:00", end:"20:00", type:"athle", activity:"Athlétisme", loc:"", verify:false},
-];
-
-// ---- Triathlon, parsed from the PDF grid (season A = printemps/été, season B = hiver) ----
-const triSeasonA = [
-  {id:"trA1", day:"Lundi",   start:"18:00", end:"19:00", activity:"PPG (TRG & Jeunes perf.)", loc:"Les Vernets ou lac"},
-  {id:"trA2", day:"Mardi",   start:"13:00", end:"14:30", activity:"Natation TRG", loc:"Marignac"},
-  {id:"trA3", day:"Mercredi",start:"14:00", end:"15:00", activity:"Natation Jeunes tous niveaux", loc:"Chandieu"},
-  {id:"trA4", day:"Jeudi",   start:"13:00", end:"14:30", activity:"Natation TRG", loc:"Marignac"},
-  {id:"trA5", day:"Vendredi",start:"13:00", end:"14:30", activity:"Natation TRG", loc:"Marignac"},
-  {id:"trA6", day:"Samedi",  start:"11:00", end:"12:30", activity:"Natation Jeunes tous niveaux", loc:"Pâquis centre"},
-  {id:"trA7", day:"Lundi",   start:"18:00", end:"19:00", activity:"Natation Jeunes tous niveaux", loc:"Les Vernets ou lac"},
-  {id:"trA8", day:"Mardi",   start:"18:00", end:"19:30", activity:"Course à pied Jeunes tous niveaux", loc:"Bout-du-monde"},
-  {id:"trA9", day:"Mercredi",start:"16:15", end:"18:15", activity:"Vélo (TRG & jeunes perf.)", loc:"Bout-du-monde"},
-  {id:"trA10",day:"Jeudi",   start:"18:00", end:"19:30", activity:"Transitions Jeunes tous niveaux (VTT/CAP)", loc:"Bout-du-monde"},
-  {id:"trA11",day:"Vendredi",start:"19:00", end:"20:00", activity:"Natation (TRG & Jeunes perf.)", loc:"Les Vernets ou lac"},
-  {id:"trA12",day:"Samedi",  start:"18:30", end:"20:00", activity:"Transitions (TRG & jeunes perf.)", loc:"CO Marais"},
-  {id:"trA13",day:"Mardi",   start:"18:00", end:"19:15", activity:"Natation Jeunes tous niveaux", loc:"Les Vernets", verify:true},
-  {id:"trA14",day:"Vendredi",start:"18:00", end:"19:30", activity:"Course à pied (TRG & jeunes perf.)", loc:"Bout-du-monde", verify:true},
-];
-
-const triSeasonB = [
-  {id:"trB1", day:"Lundi",   start:"18:00", end:"19:00", activity:"PPG (TRG & Jeunes perf.)", loc:"Les Vernets"},
-  {id:"trB2", day:"Mardi",   start:"13:00", end:"14:30", activity:"Natation TRG", loc:"Marignac"},
-  {id:"trB3", day:"Mercredi",start:"14:00", end:"15:00", activity:"Natation Jeunes tous niveaux", loc:"Chandieu"},
-  {id:"trB4", day:"Jeudi",   start:"13:00", end:"14:30", activity:"Natation TRG", loc:"Marignac"},
-  {id:"trB5", day:"Vendredi",start:"13:00", end:"14:30", activity:"Natation TRG", loc:"Marignac"},
-  {id:"trB6", day:"Samedi",  start:"11:00", end:"12:30", activity:"Natation Jeunes tous niveaux", loc:"Pâquis centre"},
-  {id:"trB7", day:"Lundi",   start:"18:00", end:"19:00", activity:"Natation Jeunes tous niveaux", loc:"Les Vernets"},
-  {id:"trB8", day:"Mardi",   start:"18:00", end:"19:30", activity:"Course à pied Jeunes tous niveaux", loc:"Bout-du-monde"},
-  {id:"trB9", day:"Mercredi",start:"14:00", end:"16:00", activity:"Vélo au vélodrome (Jeunes tous niveaux)", loc:"Vélodrome de Genève"},
-  {id:"trB10",day:"Jeudi",   start:"18:00", end:"19:30", activity:"Course à pied Jeunes tous niveaux", loc:"Bout-du-monde"},
-  {id:"trB11",day:"Vendredi",start:"19:00", end:"20:00", activity:"Natation (TRG & Jeunes perf.)", loc:"Les Vernets"},
-  {id:"trB12",day:"Samedi",  start:"18:00", end:"19:30", activity:"Course à pied (TRG & jeunes perf.)", loc:"Bout-du-monde"},
-  {id:"trB13",day:"Mercredi",start:"15:00", end:"16:00", activity:"Powerwatt Vélo (TRG & jeunes perf.)", loc:"PowerWatt Genève", verify:true},
-  {id:"trB14",day:"Vendredi",start:"18:00", end:"19:30", activity:"Course à pied (TRG & jeunes perf.)", loc:"Bout-du-monde", verify:true},
-  {id:"trB15",day:"Mardi",   start:"18:00", end:"19:15", activity:"Natation Jeunes tous niveaux", loc:"Les Vernets", verify:true},
-];
-
-triSeasonA.forEach(e=>{e.type="tri";});
-triSeasonB.forEach(e=>{e.type="tri";});
-
-let season = "A";
-let assignments = {}; // eventId -> {O:bool, L:bool}
-let customEvents = []; // user-added events, persists across season toggle (tagged with season:"A"/"B"/"both")
-let editingId = null;
-let hiddenIds = new Set(); // ids of built-in sessions the user removed from view
-let kidNames = {O:"O", L:"L"};
 const KID_IDS = ["O","L"];
+const CLUBS = [
+  {id:"bmx", label:"BMX"},
+  {id:"tri", label:"TriGenève"},
+  {id:"stade", label:"Stade Genève"}
+];
+const SPORTS = [
+  {id:"swim", label:"Natation", icon:"pool"},
+  {id:"bike", label:"Vélo", icon:"directions_bike"},
+  {id:"run", label:"Course", icon:"directions_run"}
+];
+
+function defaultEvents(){
+  return [
+    {id:"bmx1", day:"Lundi",    start:"17:45", end:"19:15", club:"bmx",   sport:"bike", activity:"BMX", loc:""},
+    {id:"bmx2", day:"Mercredi", start:"14:00", end:"16:00", club:"bmx",   sport:"bike", activity:"BMX", loc:""},
+    {id:"ath1", day:"Mercredi", start:"14:00", end:"16:00", club:"stade", sport:"run",  activity:"Athlétisme", loc:""},
+    {id:"ath2", day:"Mercredi", start:"16:00", end:"18:00", club:"stade", sport:"run",  activity:"Athlétisme", loc:""},
+    {id:"ath3", day:"Vendredi", start:"18:00", end:"20:00", club:"stade", sport:"run",  activity:"Athlétisme", loc:""},
+    {id:"trA1", day:"Lundi",    start:"18:00", end:"19:00", club:"tri", sport:"",     activity:"PPG (TRG & Jeunes perf.)", loc:"Les Vernets ou lac"},
+    {id:"trA2", day:"Mardi",    start:"13:00", end:"14:30", club:"tri", sport:"swim", activity:"Natation TRG", loc:"Marignac"},
+    {id:"trA3", day:"Mercredi", start:"14:00", end:"15:00", club:"tri", sport:"swim", activity:"Natation Jeunes tous niveaux", loc:"Chandieu"},
+    {id:"trA4", day:"Jeudi",    start:"13:00", end:"14:30", club:"tri", sport:"swim", activity:"Natation TRG", loc:"Marignac"},
+    {id:"trA5", day:"Vendredi", start:"13:00", end:"14:30", club:"tri", sport:"swim", activity:"Natation TRG", loc:"Marignac"},
+    {id:"trA6", day:"Samedi",   start:"11:00", end:"12:30", club:"tri", sport:"swim", activity:"Natation Jeunes tous niveaux", loc:"Pâquis centre"},
+    {id:"trA7", day:"Lundi",    start:"18:00", end:"19:00", club:"tri", sport:"swim", activity:"Natation Jeunes tous niveaux", loc:"Les Vernets ou lac"},
+    {id:"trA8", day:"Mardi",    start:"18:00", end:"19:30", club:"tri", sport:"run",  activity:"Course à pied Jeunes tous niveaux", loc:"Bout-du-monde"},
+    {id:"trA9", day:"Mercredi", start:"16:15", end:"18:15", club:"tri", sport:"bike", activity:"Vélo (TRG & jeunes perf.)", loc:"Bout-du-monde"},
+    {id:"trA10",day:"Jeudi",    start:"18:00", end:"19:30", club:"tri", sport:"bike", activity:"Transitions Jeunes tous niveaux (VTT/CAP)", loc:"Bout-du-monde"},
+    {id:"trA11",day:"Vendredi", start:"19:00", end:"20:00", club:"tri", sport:"swim", activity:"Natation (TRG & Jeunes perf.)", loc:"Les Vernets ou lac"},
+    {id:"trA12",day:"Samedi",   start:"18:30", end:"20:00", club:"tri", sport:"run",  activity:"Transitions (TRG & jeunes perf.)", loc:"CO Marais"},
+    {id:"trA13",day:"Mardi",    start:"18:00", end:"19:15", club:"tri", sport:"swim", activity:"Natation Jeunes tous niveaux", loc:"Les Vernets", verify:true},
+    {id:"trA14",day:"Vendredi", start:"18:00", end:"19:30", club:"tri", sport:"run",  activity:"Course à pied (TRG & jeunes perf.)", loc:"Bout-du-monde", verify:true}
+  ];
+}
+
+let events = defaultEvents();
+let assignments = {};
+let editingId = null;
+let kidNames = {O:"O", L:"L"};
 
 const GH_OWNER = "infinitethinking";
 const GH_REPO = "kids";
 const GH_BRANCH = "main";
 const GH_DATA_PATH = "planner-data.json";
 const TOKEN_KEY = "kids-planner-gh-token";
-const PATCH_FIELDS = ["day","start","end","activity","loc","type"];
 
 function getToken(){
   return (document.getElementById("tokenInput")?.value || localStorage.getItem(TOKEN_KEY) || "").trim();
@@ -537,6 +520,54 @@ function esc(str){
 function kidLabel(id){
   const n = (kidNames[id] || id).trim();
   return n || id;
+}
+
+function clubById(id){
+  return CLUBS.find(c => c.id === id) || CLUBS[1];
+}
+
+function sportById(id){
+  return SPORTS.find(s => s.id === id) || null;
+}
+
+function clubFromLegacy(type, club){
+  if(club && CLUBS.some(c => c.id === club)) return club;
+  if(type === "bmx") return "bmx";
+  if(type === "athle") return "stade";
+  return "tri";
+}
+
+function inferSport(activity, club){
+  const a = (activity || "").toLowerCase();
+  if(/natation|swim|aqua/.test(a)) return "swim";
+  if(/vélo|velo|bike|bmx|powerwatt|vtt/.test(a)) return "bike";
+  if(/course|athl|run|cap/.test(a)) return "run";
+  if(club === "bmx") return "bike";
+  if(club === "stade") return "run";
+  return "";
+}
+
+function normalizeEvent(raw){
+  const club = clubFromLegacy(raw.type, raw.club);
+  const sport = sportById(raw.sport) ? raw.sport : inferSport(raw.activity, club);
+  return {
+    id: raw.id,
+    day: raw.day,
+    start: raw.start,
+    end: raw.end,
+    activity: raw.activity || "",
+    loc: raw.loc || "",
+    club,
+    sport,
+    verify: !!raw.verify
+  };
+}
+
+function optionsHtml(list, selected, includeBlank){
+  const blank = includeBlank ? `<option value="" ${!selected?'selected':''}>—</option>` : "";
+  return blank + list.map(item =>
+    `<option value="${item.id}" ${item.id===selected?'selected':''}>${esc(item.label)}</option>`
+  ).join("");
 }
 
 function readKidNamesFromInputs(){
@@ -561,7 +592,7 @@ function updateKidChrome(){
   const titleO = document.getElementById("titleO");
   const titleL = document.getElementById("titleL");
   if(title) title.textContent = `Planning hebdomadaire — ${o} & ${l}`;
-  if(sub) sub.textContent = `Triathlon (TCG), BMX et Athlétisme — clique sur ${o} / ${l} sur une séance pour l'assigner. Utilise l'icône modifier pour corriger un jour/horaire si besoin (l'extraction du PDF n'est pas garantie à 100%).`;
+  if(sub) sub.textContent = `Clique sur ${o} / ${l} pour l'assigner à une séance. Utilise l'icône modifier pour le club, le sport, le jour ou l'horaire.`;
   if(titleO) titleO.textContent = `Séances de ${o}`;
   if(titleL) titleL.textContent = `Séances de ${l}`;
 }
@@ -625,30 +656,6 @@ function githubHeaders(withAuth){
   return headers;
 }
 
-function collectEventPatches(){
-  const patches = {};
-  [...fixedEvents, ...triSeasonA, ...triSeasonB].forEach(e => {
-    patches[e.id] = {
-      day: e.day, start: e.start, end: e.end,
-      activity: e.activity, loc: e.loc || "", type: e.type
-    };
-  });
-  return patches;
-}
-
-function applyEventPatches(patches){
-  if(!patches) return;
-  Object.entries(patches).forEach(([id, p]) => {
-    const arr = findEventArray(id);
-    if(!arr) return;
-    const ev = arr.find(e => e.id === id);
-    if(!ev) return;
-    PATCH_FIELDS.forEach(k => {
-      if(p[k] !== undefined) ev[k] = p[k];
-    });
-  });
-}
-
 function serializeState(){
   readKidNamesFromInputs();
   const compactAssignments = {};
@@ -656,30 +663,39 @@ function serializeState(){
     if(a && (a.O || a.L)) compactAssignments[id] = {O: !!a.O, L: !!a.L};
   });
   return {
-    version: 1,
+    version: 2,
     updatedAt: new Date().toISOString(),
-    season,
     assignments: compactAssignments,
-    customEvents,
-    hiddenIds: [...hiddenIds],
-    eventPatches: collectEventPatches(),
+    events: events.map(normalizeEvent),
     kidNames: {O: kidLabel("O"), L: kidLabel("L")}
   };
 }
 
 function applyState(data){
   if(!data) return;
-  season = data.season === "B" ? "B" : "A";
   assignments = data.assignments && typeof data.assignments === "object" ? data.assignments : {};
-  customEvents = Array.isArray(data.customEvents) ? data.customEvents : [];
-  hiddenIds = new Set(Array.isArray(data.hiddenIds) ? data.hiddenIds : []);
   if(data.kidNames && typeof data.kidNames === "object"){
     kidNames = {
       O: (data.kidNames.O || "O").trim() || "O",
       L: (data.kidNames.L || "L").trim() || "L"
     };
   }
-  applyEventPatches(data.eventPatches);
+  if(Array.isArray(data.events) && data.events.length){
+    events = data.events.map(normalizeEvent);
+  }else{
+    const byId = new Map(defaultEvents().map(e => [e.id, e]));
+    const hidden = new Set(Array.isArray(data.hiddenIds) ? data.hiddenIds : []);
+    if(data.eventPatches && typeof data.eventPatches === "object"){
+      Object.entries(data.eventPatches).forEach(([id, p]) => {
+        const base = byId.get(id) || {id};
+        byId.set(id, normalizeEvent({...base, ...p}));
+      });
+    }
+    if(Array.isArray(data.customEvents)){
+      data.customEvents.forEach(e => byId.set(e.id, normalizeEvent(e)));
+    }
+    events = [...byId.values()].filter(e => !hidden.has(e.id));
+  }
   fillKidNameInputs();
 }
 
@@ -745,13 +761,8 @@ function toMinutes(t){
   return h*60+m;
 }
 
-function currentTriEvents(){
-  return season === "A" ? triSeasonA : triSeasonB;
-}
-
-function allEvents(){
-  const custom = customEvents.filter(e => e.season === season || e.season === "both");
-  return [...fixedEvents, ...currentTriEvents(), ...custom].filter(e => !hiddenIds.has(e.id));
+function findEvent(id){
+  return events.find(e => e.id === id);
 }
 
 function getAssign(id){
@@ -764,26 +775,26 @@ function overlaps(a,b){
 }
 
 function conflictsFor(ev, kid){
-  const evs = allEvents();
-  return evs.some(other => other.id !== ev.id
+  return events.some(other => other.id !== ev.id
       && getAssign(other.id)[kid]
       && overlaps(ev, other));
 }
 
+function sportIconHtml(sportId){
+  const sport = sportById(sportId);
+  if(!sport) return "";
+  return `<span class="material-symbols-outlined sport-icon" title="${esc(sport.label)}" aria-label="${esc(sport.label)}">${sport.icon}</span>`;
+}
+
 function render(){
   updateKidChrome();
-  document.querySelectorAll('#seasonToggle button').forEach(b=>{
-    b.classList.toggle('active', b.dataset.season === season);
-  });
-
   const grid = document.getElementById('grid');
   grid.innerHTML = "";
-  const evs = allEvents();
 
   DAYS.forEach(day=>{
     const col = document.createElement('div');
     col.className = 'day-col';
-    const dayEvents = evs.filter(e=>e.day===day).sort((a,b)=>toMinutes(a.start)-toMinutes(b.start));
+    const dayEvents = events.filter(e=>e.day===day).sort((a,b)=>toMinutes(a.start)-toMinutes(b.start));
 
     let html = `<h2>${day}</h2>`;
     if(dayEvents.length===0){
@@ -797,13 +808,17 @@ function render(){
       const lName = kidLabel("L");
       const cO = a.O && conflictsFor(ev,'O');
       const cL = a.L && conflictsFor(ev,'L');
+      const club = clubById(ev.club);
       const div = document.createElement('div');
-      div.className = `event ${ev.type}` + ((cO||cL) ? ' conflict' : '');
+      div.className = `event club-${club.id}` + ((cO||cL) ? ' conflict' : '');
       div.innerHTML = `
         <button class="icon-btn edit-toggle" data-edit="${ev.id}" type="button" title="Modifier" aria-label="Modifier">
           <span class="material-symbols-outlined">edit</span>
         </button>
-        <div class="time">${ev.start}–${ev.end}</div>
+        <div class="event-head">
+          ${sportIconHtml(ev.sport)}
+          <div class="time">${ev.start}–${ev.end}</div>
+        </div>
         <div class="activity">${esc(ev.activity)}</div>
         ${ev.loc ? `<div class="loc">${esc(ev.loc)}</div>` : ''}
         ${ev.verify ? `<div class="conflict-flag"><span class="material-symbols-outlined">warning</span>jour/heure à vérifier</div>` : ''}
@@ -813,6 +828,12 @@ function render(){
           <button class="kid-btn ${a.L?'on-L':''}" data-kid="L" data-id="${ev.id}">${esc(lName)}</button>
         </div>
         <div class="edit-fields ${editingId===ev.id?'show':''}" data-fields="${ev.id}">
+          <select data-field="club" data-id="${ev.id}">
+            ${optionsHtml(CLUBS, ev.club, false)}
+          </select>
+          <select data-field="sport" data-id="${ev.id}">
+            ${optionsHtml(SPORTS, ev.sport, true)}
+          </select>
           <select data-field="day" data-id="${ev.id}">
             ${DAYS.map(d=>`<option value="${d}" ${d===ev.day?'selected':''}>${d}</option>`).join('')}
           </select>
@@ -831,15 +852,15 @@ function render(){
     grid.appendChild(col);
   });
 
-  renderSummary(evs);
-  renderWeekCards(evs);
+  renderSummary();
+  renderWeekCards();
   attachHandlers();
 }
 
-function renderWeekCards(evs){
+function renderWeekCards(){
   const container = document.getElementById('weekCards');
   const daysWithSelection = DAYS.filter(day =>
-    evs.some(e => e.day === day && (getAssign(e.id).O || getAssign(e.id).L))
+    events.some(e => e.day === day && (getAssign(e.id).O || getAssign(e.id).L))
   );
 
   if(daysWithSelection.length === 0){
@@ -848,14 +869,15 @@ function renderWeekCards(evs){
   }
 
   container.innerHTML = daysWithSelection.map(day=>{
-    const items = evs.filter(e => e.day === day && (getAssign(e.id).O || getAssign(e.id).L))
+    const items = events.filter(e => e.day === day && (getAssign(e.id).O || getAssign(e.id).L))
       .sort((a,b)=>toMinutes(a.start)-toMinutes(b.start));
     const itemsHtml = items.map(e=>{
       const a = getAssign(e.id);
       const chips = KID_IDS.filter(k=>a[k]).map(k=>`<span class="kid-chip ${k}">${esc(kidLabel(k))}</span>`).join('');
+      const sport = sportById(e.sport);
       return `
-        <div class="day-summary-item ${e.type}">
-          <div class="t">${e.start}–${e.end}</div>
+        <div class="day-summary-item club-${clubById(e.club).id}">
+          <div class="t">${sport ? `<span class="material-symbols-outlined">${sport.icon}</span>` : ''}${e.start}–${e.end}</div>
           <div class="a">${esc(e.activity)}${e.loc ? ' — '+esc(e.loc) : ''}</div>
           <div class="kids">${chips}</div>
         </div>
@@ -865,10 +887,10 @@ function renderWeekCards(evs){
   }).join('');
 }
 
-function renderSummary(evs){
+function renderSummary(){
   KID_IDS.forEach(kid=>{
     const list = document.getElementById('list'+kid);
-    const items = evs.filter(e=>getAssign(e.id)[kid])
+    const items = events.filter(e=>getAssign(e.id)[kid])
       .sort((a,b)=> DAYS.indexOf(a.day)-DAYS.indexOf(b.day) || toMinutes(a.start)-toMinutes(b.start));
     if(items.length===0){
       list.innerHTML = `<li class="empty" style="list-style:none;margin-left:-18px;">Aucune séance assignée.</li>`;
@@ -876,7 +898,8 @@ function renderSummary(evs){
     }
     list.innerHTML = items.map(e=>{
       const conf = conflictsFor(e,kid);
-      return `<li class="${conf?'conflict-item':''}">${conf?'<span class="material-symbols-outlined">warning</span> ':''}${e.day} ${e.start}–${e.end} — ${esc(e.activity)}${e.loc? ' ('+esc(e.loc)+')':''}</li>`;
+      const sport = sportById(e.sport);
+      return `<li class="${conf?'conflict-item':''}">${conf?'<span class="material-symbols-outlined">warning</span> ':''}${sport?'<span class="material-symbols-outlined">'+sport.icon+'</span> ':''}${e.day} ${e.start}–${e.end} — ${esc(e.activity)}${e.loc? ' ('+esc(e.loc)+')':''}</li>`;
     }).join('');
   });
 }
@@ -906,7 +929,7 @@ function attachHandlers(){
   document.querySelectorAll('[data-del]').forEach(btn=>{
     btn.onclick = ()=>{
       const id = btn.dataset.del;
-      hiddenIds.add(id);
+      events = events.filter(e => e.id !== id);
       delete assignments[id];
       editingId = null;
       render();
@@ -914,40 +937,18 @@ function attachHandlers(){
   });
 }
 
-function findEventArray(id){
-  if(fixedEvents.find(e=>e.id===id)) return fixedEvents;
-  if(triSeasonA.find(e=>e.id===id)) return triSeasonA;
-  if(triSeasonB.find(e=>e.id===id)) return triSeasonB;
-  if(customEvents.find(e=>e.id===id)) return customEvents;
-  return null;
-}
-
 function updateEvent(id, field, value){
-  const arr = findEventArray(id);
-  if(!arr) return;
-  const ev = arr.find(e=>e.id===id);
+  const ev = findEvent(id);
+  if(!ev) return;
   ev[field] = value;
   render();
 }
 
-document.getElementById('seasonToggle').addEventListener('click', (e)=>{
-  const btn = e.target.closest('button[data-season]');
-  if(!btn) return;
-  season = btn.dataset.season;
-  editingId = null;
-  render();
-});
-
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  hiddenIds.clear();
-  render();
-});
-
 document.getElementById('addEventBtn').addEventListener('click', ()=>{
   const id = 'custom_' + Date.now();
-  customEvents.push({
+  events.push({
     id, day:"Lundi", start:"18:00", end:"19:00",
-    type:"tri", activity:"Nouvelle séance", loc:"", custom:true, season
+    club:"tri", sport:"swim", activity:"Nouvelle séance", loc:""
   });
   editingId = id;
   render();
@@ -1010,5 +1011,6 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   render();
 })();
 </script>
+
 </body>
 </html>
