@@ -1,7 +1,24 @@
 {
   "version": 2,
-  "updatedAt": "2026-08-18T13:48:55.037Z",
-  "assignments": {},
+  "updatedAt": "2026-08-18T15:30:57.747Z",
+  "assignments": {
+    "tcg-jtn-lun-nat": {
+      "O": true,
+      "L": true
+    },
+    "bmx2": {
+      "O": true,
+      "L": true
+    },
+    "custom_1787062598389": {
+      "O": true,
+      "L": false
+    },
+    "tcg-jtn-mar-cap": {
+      "O": true,
+      "L": true
+    }
+  },
   "events": [
     {
       "id": "bmx1",
@@ -9,11 +26,11 @@
       "start": "17:45",
       "end": "19:15",
       "activity": "BMX",
-      "loc": "",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
       "club": "bmx",
       "sport": "bike",
       "verify": false,
-      "optional": false
+      "optional": true
     },
     {
       "id": "bmx2",
@@ -21,7 +38,7 @@
       "start": "14:00",
       "end": "16:00",
       "activity": "BMX",
-      "loc": "",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
       "club": "bmx",
       "sport": "bike",
       "verify": false,
@@ -32,8 +49,8 @@
       "day": "Lundi",
       "start": "18:00",
       "end": "19:00",
-      "activity": "Natation Jeunes tous niveaux",
-      "loc": "Les Vernets ou lac",
+      "activity": "Natation",
+      "loc": "Bâtiment Patinoire des Vernets (GE) - Genève",
       "club": "tri",
       "sport": "swim",
       "verify": false,
@@ -44,49 +61,77 @@
       "day": "Mardi",
       "start": "18:00",
       "end": "19:30",
-      "activity": "Course à pied Jeunes tous niveaux",
-      "loc": "Bout-du-monde",
+      "activity": "COURSE A PIEDS",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
       "club": "tri",
       "sport": "run",
       "verify": false,
-      "optional": false
+      "optional": true
     },
     {
       "id": "tcg-jtn-mer-nat",
       "day": "Mercredi",
       "start": "14:00",
       "end": "15:00",
-      "activity": "Natation Jeunes tous niveaux",
-      "loc": "Chandieu",
+      "activity": "Natation",
+      "loc": "Rue CHANDIEU 8 1202 Genève",
       "club": "tri",
       "sport": "swim",
       "verify": false,
-      "optional": false
+      "optional": true
     },
     {
       "id": "tcg-jtn-jeu-cap",
       "day": "Jeudi",
       "start": "18:00",
       "end": "19:30",
-      "activity": "Course à pied Jeunes tous niveaux",
-      "loc": "Bout-du-monde",
+      "activity": "COURSE A PIEDS / ENCHAINEMENTS",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
       "club": "tri",
       "sport": "run",
       "verify": false,
-      "optional": false
+      "optional": true
     },
     {
       "id": "tcg-jtn-sam-nat",
       "day": "Samedi",
       "start": "11:00",
       "end": "12:30",
-      "activity": "Natation Jeunes tous niveaux",
-      "loc": "Pâquis centre",
+      "activity": "Natation",
+      "loc": "Rue de Berne 50 1201 Genève",
       "club": "tri",
       "sport": "swim",
       "verify": false,
+      "optional": true
+    },
+    {
+      "id": "custom_1787062559758",
+      "day": "Mercredi",
+      "start": "17:00",
+      "end": "18:00",
+      "activity": "ATHLE",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
+      "club": "stade",
+      "sport": "run",
+      "verify": false,
+      "optional": true
+    },
+    {
+      "id": "custom_1787062598389",
+      "day": "Vendredi",
+      "start": "18:00",
+      "end": "20:00",
+      "activity": "ATHLE",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
+      "club": "stade",
+      "sport": "run",
+      "verify": false,
       "optional": false
     }
+  ],
+  "deletedIds": [
+    "custom_1787061850825",
+    "custom_1787061570285"
   ],
   "kidNames": {
     "O": "OLIVIA",
