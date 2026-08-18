@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updatedAt": "2026-08-18T13:20:00.000Z",
+  "updatedAt": "2026-08-18T13:32:36.189Z",
   "assignments": {},
   "events": [
     {
@@ -12,7 +12,8 @@
       "loc": "",
       "club": "bmx",
       "sport": "bike",
-      "verify": false
+      "verify": false,
+      "optional": false
     },
     {
       "id": "bmx2",
@@ -23,7 +24,8 @@
       "loc": "",
       "club": "bmx",
       "sport": "bike",
-      "verify": false
+      "verify": false,
+      "optional": false
     },
     {
       "id": "tcg-jtn-lun-nat",
@@ -34,7 +36,8 @@
       "loc": "Les Vernets ou lac",
       "club": "tri",
       "sport": "swim",
-      "verify": false
+      "verify": false,
+      "optional": false
     },
     {
       "id": "tcg-jtn-mar-cap",
@@ -45,7 +48,8 @@
       "loc": "Bout-du-monde",
       "club": "tri",
       "sport": "run",
-      "verify": false
+      "verify": false,
+      "optional": false
     },
     {
       "id": "tcg-jtn-mer-nat",
@@ -56,7 +60,8 @@
       "loc": "Chandieu",
       "club": "tri",
       "sport": "swim",
-      "verify": false
+      "verify": false,
+      "optional": false
     },
     {
       "id": "tcg-jtn-jeu-cap",
@@ -67,7 +72,8 @@
       "loc": "Bout-du-monde",
       "club": "tri",
       "sport": "run",
-      "verify": false
+      "verify": false,
+      "optional": false
     },
     {
       "id": "tcg-jtn-sam-nat",
@@ -78,11 +84,24 @@
       "loc": "Pâquis centre",
       "club": "tri",
       "sport": "swim",
-      "verify": false
+      "verify": false,
+      "optional": false
+    },
+    {
+      "id": "custom_1787059920196",
+      "day": "Vendredi",
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "Nouvelle séance",
+      "loc": "",
+      "club": "tri",
+      "sport": "swim",
+      "verify": false,
+      "optional": false
     }
   ],
   "kidNames": {
-    "O": "O",
-    "L": "L"
+    "O": "Olivia",
+    "L": "Leo"
   }
 }
