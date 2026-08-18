@@ -110,6 +110,14 @@
     gap:8px;
     align-items:center;
   }
+  .sync-status{
+    font-size:11.5px;
+    color:#6b6357;
+    max-width:220px;
+    line-height:1.3;
+  }
+  .sync-status.local{color:#8a5a12;}
+  .sync-status.err{color:var(--warn);}
 
   .drawer-backdrop{
     position:fixed;
@@ -575,6 +583,7 @@
     <button class="icon-btn" id="saveBtn" type="button" title="Enregistrer" aria-label="Enregistrer">
       <span class="material-symbols-outlined">save</span>
     </button>
+    <div class="sync-status" id="syncStatus">Chargement…</div>
   </div>
 </div>
 
@@ -620,6 +629,7 @@
         <span class="material-symbols-outlined">delete</span>
       </button>
     </div>
+    <span style="font-weight:500;color:#6b6357;margin-top:4px;display:block;">Le jeton sert à écrire. Les autres appareils lisent le même planning sans jeton, après un enregistrement ici.</span>
   </label>
 </aside>
 
@@ -881,6 +891,12 @@ function newerState(a, b){
   return (a.updatedAt || "") >= (b.updatedAt || "") ? a : b;
 }
 
+function localIsAhead(local, remote){
+  if(!local) return false;
+  if(!remote) return true;
+  return (local.updatedAt || "") > (remote.updatedAt || "");
+}
+
 function mergeEventLists(remoteEvents, localEvents, deleted){
   const byId = new Map();
   catalogEvents().forEach(e => byId.set(e.id, normalizeEvent(e)));
@@ -898,29 +914,48 @@ function mergeEventLists(remoteEvents, localEvents, deleted){
 }
 
 function mergePlannerData(remote, local){
-  const deleted = new Set([
-    ...(Array.isArray(remote?.deletedIds) ? remote.deletedIds : []),
-    ...(Array.isArray(local?.deletedIds) ? local.deletedIds : [])
-  ]);
-  const kidSource = newerState(local, remote) || remote || local || {};
-  const names = kidSource.kidNames && typeof kidSource.kidNames === "object"
-    ? kidSource.kidNames
-    : {};
-  const assignmentsMerged = {
-    ...(remote?.assignments && typeof remote.assignments === "object" ? remote.assignments : {}),
-    ...(local?.assignments && typeof local.assignments === "object" ? local.assignments : {})
-  };
+  const useLocal = localIsAhead(local, remote);
+  const primary = useLocal ? local : (remote || local || {});
+  const deleted = new Set(Array.isArray(primary.deletedIds) ? primary.deletedIds : []);
+  if(useLocal && Array.isArray(remote?.deletedIds)){
+    remote.deletedIds.forEach(id => deleted.add(id));
+  }
+  const names = primary.kidNames && typeof primary.kidNames === "object" ? primary.kidNames : {};
+  const assignments = primary.assignments && typeof primary.assignments === "object" ? primary.assignments : {};
   return {
     version: 2,
-    updatedAt: (kidSource.updatedAt || new Date().toISOString()),
-    assignments: assignmentsMerged,
-    events: mergeEventLists(remote?.events, local?.events, deleted),
+    updatedAt: primary.updatedAt || new Date().toISOString(),
+    assignments,
+    events: useLocal
+      ? mergeEventLists(remote?.events, local?.events, deleted)
+      : mergeEventLists(remote?.events || primary.events, null, deleted),
     deletedIds: [...deleted],
     kidNames: {
       O: (names.O || names.o || "O").toString().trim() || "O",
       L: (names.L || names.l || "L").toString().trim() || "L"
     }
   };
+}
+
+function setSyncStatus(kind, detail){
+  const el = document.getElementById("syncStatus");
+  if(!el) return;
+  el.classList.remove("local", "err");
+  if(kind === "github"){
+    el.textContent = "Partagé entre tes appareils";
+    el.title = "Les autres appareils voient ce planning (GitHub).";
+  }else if(kind === "local"){
+    el.classList.add("local");
+    el.textContent = "Sur cet appareil seulement";
+    el.title = "Colle un jeton dans Réglages, puis Enregistrer, pour le voir ailleurs.";
+  }else if(kind === "err"){
+    el.classList.add("err");
+    el.textContent = detail || "Sync impossible";
+    el.title = detail || "";
+  }else{
+    el.textContent = detail || "";
+    el.title = "";
+  }
 }
 
 function scheduleSave(immediate){
@@ -931,7 +966,11 @@ function scheduleSave(immediate){
 }
 
 async function autoSave(){
-  if(!plannerReady || !getToken()) return;
+  if(!plannerReady) return;
+  if(!getToken()){
+    setSyncStatus("local");
+    return;
+  }
   if(saveInFlight){
     saveQueued = true;
     return;
@@ -940,8 +979,10 @@ async function autoSave(){
   try{
     await saveRemoteState();
     markSave(true);
+    setSyncStatus("github");
   }catch(err){
     markSave(false, err.message || String(err));
+    setSyncStatus("err", err.message || String(err));
   }finally{
     saveInFlight = false;
     if(saveQueued){
@@ -1064,6 +1105,15 @@ function applyState(data){
   fillKidNameInputs();
 }
 
+async function fetchRemoteJsonFile(){
+  const res = await fetch(
+    `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${encodeURIComponent(GH_BRANCH)}/${GH_DATA_PATH}?t=${Date.now()}`,
+    { cache: "no-store" }
+  );
+  if(!res.ok) return null;
+  return res.json();
+}
+
 async function fetchRemoteState(){
   const res = await fetch(
     `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${encodeURIComponent(GH_DATA_PATH)}?ref=${encodeURIComponent(GH_BRANCH)}&t=${Date.now()}`,
@@ -1078,6 +1128,8 @@ async function fetchRemoteState(){
   );
   if(res.status === 404) return { sha: null, data: null };
   if(!res.ok){
+    const fallback = await fetchRemoteJsonFile();
+    if(fallback) return { sha: null, data: fallback };
     const body = await res.text();
     throw new Error(`Lecture GitHub ${res.status}: ${body}`);
   }
@@ -1904,8 +1956,10 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   try{
     await saveRemoteState();
     markSave(true);
+    setSyncStatus("github");
   }catch(err){
     markSave(false, err.message || String(err));
+    setSyncStatus("err", err.message || String(err));
   }finally{
     btn.disabled = false;
   }
@@ -1931,6 +1985,9 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
     persistLocal(snapshotState(merged.updatedAt));
     const remoteIds = new Set((remote?.events || []).map(e => e.id));
     restoredCatalog = catalogEvents().some(e => !remoteIds.has(e.id) && !deletedIds.includes(e.id));
+    if(localIsAhead(local, remote)) setSyncStatus("local");
+    else if(remote) setSyncStatus("github");
+    else setSyncStatus("local");
   }finally{
     plannerReady = true;
     saveBtn.disabled = false;

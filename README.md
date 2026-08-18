@@ -2,7 +2,9 @@
 
 Weekly training planner: https://infinitethinking.github.io/kids/
 
-Clicks on O/L, edits, and extra sessions are stored in [`planner-data.json`](planner-data.json). Double-click a séance (or the pencil) to edit it in a dialog; the location field uses the Swiss geo.admin.ch address search. Edits auto-save to GitHub.
+Clicks on O/L, edits, and extra sessions are stored in [`planner-data.json`](planner-data.json). Double-click a séance (or the pencil) to edit it in a dialog; the location field uses the Swiss geo.admin.ch address search.
+
+**Same planning on every device:** paste the GitHub token on the device where you *edit*, then save (icon turns green). Other phones and computers just open this site — they do not need the token to *read*.
 
 ## Save from the planner
 
