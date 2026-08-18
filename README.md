@@ -11,7 +11,7 @@ Clicks on O/L, edits, and extra sessions are stored in [`planner-data.json`](pla
 3. Resource owner: `infinitethinking`.
 4. Repository access: only **kids**.
 5. Repository permissions: **Contents** → **Read and write**.
-6. Generate the token and paste it once in the planner. It stays in that browser (local storage), not in the page source.
-7. Click **Enregistrer**. Other devices see the same plan after a reload (data is read from GitHub, not from the Pages cache).
+6. Generate the token and paste it once in the planner: click **+**, paste, then the save icon. It stays in that browser (local storage), not in the page source.
+7. Click the save icon after you change assignments. Other devices see the same plan after a reload.
 
-Anyone with the token can write to this repo. Use **Oublier le jeton** on a shared computer.
+Anyone with the token can write to this repo. Use the delete icon on a shared computer.
