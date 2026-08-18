@@ -24,6 +24,61 @@
       "club": "bmx",
       "sport": "bike",
       "verify": false
+    },
+    {
+      "id": "tcg-jtn-lun-nat",
+      "day": "Lundi",
+      "start": "18:00",
+      "end": "19:00",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Les Vernets ou lac",
+      "club": "tri",
+      "sport": "swim",
+      "verify": false
+    },
+    {
+      "id": "tcg-jtn-mar-cap",
+      "day": "Mardi",
+      "start": "18:00",
+      "end": "19:30",
+      "activity": "Course à pied Jeunes tous niveaux",
+      "loc": "Bout-du-monde",
+      "club": "tri",
+      "sport": "run",
+      "verify": false
+    },
+    {
+      "id": "tcg-jtn-mer-nat",
+      "day": "Mercredi",
+      "start": "14:00",
+      "end": "15:00",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Chandieu",
+      "club": "tri",
+      "sport": "swim",
+      "verify": false
+    },
+    {
+      "id": "tcg-jtn-jeu-cap",
+      "day": "Jeudi",
+      "start": "18:00",
+      "end": "19:30",
+      "activity": "Course à pied Jeunes tous niveaux",
+      "loc": "Bout-du-monde",
+      "club": "tri",
+      "sport": "run",
+      "verify": false
+    },
+    {
+      "id": "tcg-jtn-sam-nat",
+      "day": "Samedi",
+      "start": "11:00",
+      "end": "12:30",
+      "activity": "Natation Jeunes tous niveaux",
+      "loc": "Pâquis centre",
+      "club": "tri",
+      "sport": "swim",
+      "verify": false
     }
   ],
   "kidNames": {
