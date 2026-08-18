@@ -13,6 +13,7 @@
     font-size:20px;
     line-height:1;
     user-select:none;
+    pointer-events:none;
   }
   :root{
     --ink:#1b2430;
@@ -184,7 +185,10 @@
     color:#8a8271;
     border-radius:4px;
   }
-  .card-actions .icon-btn .material-symbols-outlined{font-size:18px;}
+  .card-actions .icon-btn .material-symbols-outlined{
+    font-size:18px;
+    pointer-events:none;
+  }
   .card-actions .del-btn{color:var(--warn);}
   .conflict-flag .material-symbols-outlined{
     font-size:15px;
@@ -238,6 +242,10 @@
     font-size:12px;
     border:1px solid transparent;
     position:relative;
+    cursor:pointer;
+  }
+  .event:hover{
+    filter:brightness(0.98);
   }
   .event.club-tri{background:var(--tri-bg);border-color:#bcd9e0;}
   .event.club-bmx{background:var(--bmx-bg);border-color:#e3bda6;}
@@ -313,40 +321,119 @@
   .kid-btn.on-O{background:var(--o-color);border-color:var(--o-color);color:#fff;}
   .kid-btn.on-L{background:var(--l-color);border-color:var(--l-color);color:#fff;}
 
-  .edit-fields{
-    margin-top:6px;
-    display:none;
-    gap:5px;
-    flex-direction:column;
+  .edit-dialog{
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:0;
+    width:min(440px, calc(100vw - 24px));
+    background:var(--paper);
+    color:var(--ink);
+    box-shadow:0 18px 50px rgba(27,36,48,0.28);
   }
-  .edit-fields.show{display:flex;}
-  .opt-row{
+  .edit-dialog::backdrop{
+    background:rgba(27,36,48,0.4);
+  }
+  .edit-dialog[open]{display:flex;flex-direction:column;}
+  .modal-head{
     display:flex;
     align-items:center;
-    gap:6px;
-    font-size:11.5px;
+    justify-content:space-between;
+    padding:14px 16px 8px;
+  }
+  .modal-head h2{
+    margin:0;
+    font-size:16px;
+  }
+  .modal-form{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:6px 16px 16px;
+  }
+  .modal-form label{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:12px;
     font-weight:600;
+  }
+  .modal-form input,
+  .modal-form select{
+    font-size:14px;
+    font-weight:500;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
     color:var(--ink);
+  }
+  .modal-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .addr-wrap{position:relative;}
+  .addr-suggest{
+    position:absolute;
+    left:0;
+    right:0;
+    top:100%;
+    z-index:2;
+    margin:4px 0 0;
+    padding:4px;
+    list-style:none;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:8px;
+    max-height:220px;
+    overflow:auto;
+    box-shadow:0 8px 20px rgba(27,36,48,0.12);
+  }
+  .addr-suggest[hidden]{display:none;}
+  .addr-suggest button{
+    display:block;
+    width:100%;
+    text-align:left;
+    border:none;
+    background:transparent;
+    padding:8px 10px;
+    border-radius:6px;
+    font-size:13px;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .addr-suggest button:hover,
+  .addr-suggest button.active{
+    background:var(--tri-bg);
+  }
+  .modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    margin-top:8px;
+  }
+  .text-btn{
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:8px;
+    padding:8px 14px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
   }
   .opt-switch{
     border:none;
     background:none;
-    padding:0;
+    padding:4px 0;
     cursor:pointer;
     display:inline-flex;
     color:#8a8271;
   }
-  .opt-switch .material-symbols-outlined{font-size:28px;}
+  .opt-switch .material-symbols-outlined{font-size:28px;pointer-events:none;}
   .opt-switch[aria-pressed="true"] .material-symbols-outlined{
     font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;
     color:var(--ink);
-  }
-  .edit-fields input, .edit-fields select{
-    font-size:11px;
-    padding:3px 5px;
-    border:1px solid #c9c2b0;
-    border-radius:4px;
-    width:100%;
   }
 
   .summary{
@@ -437,7 +524,7 @@
 <body>
 
 <h1 id="pageTitle">Planning hebdomadaire — O &amp; L</h1>
-<div class="sub" id="pageSub">Clique sur un enfant pour l'assigner à une séance. Utilise l'icône modifier pour le club, le sport, le jour ou l'horaire.</div>
+<div class="sub" id="pageSub">Clique sur un enfant pour l'assigner. Double-clique une séance — ou l'icône crayon — pour la modifier.</div>
 
 <div class="toolbar">
   <div class="legend">
@@ -499,6 +586,56 @@
     </div>
   </label>
 </aside>
+
+<dialog id="editModal" class="edit-dialog" aria-labelledby="editModalTitle">
+  <div class="modal-head">
+    <h2 id="editModalTitle">Modifier la séance</h2>
+    <button class="icon-btn ghost" id="editCloseBtn" type="button" title="Fermer" aria-label="Fermer">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </div>
+  <form class="modal-form" id="editForm">
+    <div class="modal-row">
+      <label>Club
+        <select id="editClub"></select>
+      </label>
+      <label>Sport
+        <select id="editSport"></select>
+      </label>
+    </div>
+    <div class="modal-row">
+      <label>Jour
+        <select id="editDay"></select>
+      </label>
+      <label>Optionnel
+        <button class="opt-switch" id="editOptional" type="button" title="Séance optionnelle" aria-label="Séance optionnelle" aria-pressed="false">
+          <span class="material-symbols-outlined">toggle_off</span>
+        </button>
+      </label>
+    </div>
+    <div class="modal-row">
+      <label>Début
+        <input id="editStart" type="text" inputmode="numeric" placeholder="HH:MM" autocomplete="off">
+      </label>
+      <label>Fin
+        <input id="editEnd" type="text" inputmode="numeric" placeholder="HH:MM" autocomplete="off">
+      </label>
+    </div>
+    <label>Activité
+      <input id="editActivity" type="text" autocomplete="off">
+    </label>
+    <label>Lieu
+      <div class="addr-wrap">
+        <input id="editLoc" type="text" placeholder="Adresse suisse, piscine, stade…" autocomplete="off" spellcheck="false">
+        <ul class="addr-suggest" id="addrSuggest" hidden></ul>
+      </div>
+    </label>
+    <div class="modal-actions">
+      <button class="text-btn ghost" id="editCancelBtn" type="button">Annuler</button>
+      <button class="text-btn" type="submit">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
 
 <script>
 const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
@@ -650,11 +787,8 @@ function fillKidNameInputs(){
 }
 
 function flushEditFields(){
-  document.querySelectorAll("[data-field]").forEach(inp=>{
-    const ev = findEvent(inp.dataset.id);
-    if(!ev || !inp.dataset.field) return;
-    ev[inp.dataset.field] = inp.value;
-  });
+  const modal = document.getElementById("editModal");
+  if(modal && modal.open && editingId) applyModalToEvent();
 }
 
 function loadLocalState(){
@@ -779,7 +913,7 @@ function updateKidChrome(){
   const titleO = document.getElementById("titleO");
   const titleL = document.getElementById("titleL");
   if(title) title.textContent = `Planning hebdomadaire — ${o} & ${l}`;
-  if(sub) sub.textContent = `Clique sur ${o} / ${l} pour l'assigner à une séance. Utilise l'icône modifier pour le club, le sport, le jour ou l'horaire.`;
+  if(sub) sub.textContent = `Clique sur ${o} / ${l} pour l'assigner. Double-clique une séance — ou le crayon — pour la modifier.`;
   if(titleO) titleO.textContent = `Séances de ${o}`;
   if(titleL) titleL.textContent = `Séances de ${l}`;
 }
@@ -1173,6 +1307,8 @@ function render(){
       const club = clubById(ev.club);
       const div = document.createElement('div');
       div.className = `event club-${club.id}` + (ev.optional ? ' optional' : '') + ((cO||cL) ? ' conflict' : '');
+      div.dataset.id = ev.id;
+      div.title = "Double-clique pour modifier";
       div.innerHTML = `
         <div class="card-actions">
           <button class="icon-btn" data-ics="${ev.id}" type="button" title="Télécharger le calendrier" aria-label="Télécharger le calendrier">
@@ -1197,27 +1333,6 @@ function render(){
           <button class="kid-btn ${a.O?'on-O':''}" data-kid="O" data-id="${ev.id}">${esc(oName)}</button>
           <button class="kid-btn ${a.L?'on-L':''}" data-kid="L" data-id="${ev.id}">${esc(lName)}</button>
         </div>
-        <div class="edit-fields ${editingId===ev.id?'show':''}" data-fields="${ev.id}">
-          <select data-field="club" data-id="${ev.id}">
-            ${optionsHtml(CLUBS, ev.club, false)}
-          </select>
-          <select data-field="sport" data-id="${ev.id}">
-            ${optionsHtml(SPORTS, ev.sport, true)}
-          </select>
-          <select data-field="day" data-id="${ev.id}">
-            ${DAYS.map(d=>`<option value="${d}" ${d===ev.day?'selected':''}>${d}</option>`).join('')}
-          </select>
-          <input type="text" data-field="start" data-id="${ev.id}" value="${ev.start}" placeholder="HH:MM">
-          <input type="text" data-field="end" data-id="${ev.id}" value="${ev.end}" placeholder="HH:MM">
-          <input type="text" data-field="activity" data-id="${ev.id}" value="${esc(ev.activity)}">
-          <input type="text" data-field="loc" data-id="${ev.id}" value="${esc(ev.loc||'')}" placeholder="Lieu">
-          <div class="opt-row">
-            <button class="opt-switch" data-optional="${ev.id}" type="button" title="Séance optionnelle" aria-label="Séance optionnelle" aria-pressed="${ev.optional?'true':'false'}">
-              <span class="material-symbols-outlined">${ev.optional?'toggle_on':'toggle_off'}</span>
-            </button>
-            Optionnel
-          </div>
-        </div>
       `;
       col.appendChild(div);
     });
@@ -1227,7 +1342,6 @@ function render(){
 
   renderSummary();
   renderWeekCards();
-  attachHandlers();
 }
 
 function renderWeekCards(){
@@ -1277,120 +1391,244 @@ function renderSummary(){
   });
 }
 
-function attachHandlers(){
-  document.querySelectorAll('.kid-btn').forEach(btn=>{
-    btn.onclick = ()=>{
-      flushEditFields();
-      const id = btn.dataset.id, kid = btn.dataset.kid;
-      const a = getAssign(id);
-      a[kid] = !a[kid];
-      scheduleSave();
-      render();
-    };
-  });
-  document.querySelectorAll('[data-edit]').forEach(btn=>{
-    btn.onclick = ()=>{
-      flushEditFields();
-      const id = btn.dataset.edit;
-      const closing = editingId === id;
-      editingId = closing ? null : id;
-      render();
-      if(closing) scheduleSave(true);
-    };
-  });
-  document.querySelectorAll('[data-field]').forEach(inp=>{
-    const apply = (rerender)=>{
-      updateEvent(inp.dataset.id, inp.dataset.field, inp.value, rerender);
-    };
-    inp.oninput = ()=> apply(false);
-    inp.onchange = ()=> apply(inp.dataset.field === "day");
-  });
-  document.querySelectorAll('[data-ics]').forEach(btn=>{
-    btn.onclick = ()=>{
-      flushEditFields();
-      const ev = findEvent(btn.dataset.ics);
-      if(ev) downloadIcs(ev);
-    };
-  });
-  document.querySelectorAll('[data-add-day]').forEach(btn=>{
-    btn.onclick = ()=> addSession(btn.dataset.addDay);
-  });
-  document.querySelectorAll('[data-optional]').forEach(btn=>{
-    btn.onclick = ()=>{
-      flushEditFields();
-      const ev = findEvent(btn.dataset.optional);
-      if(!ev) return;
-      ev.optional = !ev.optional;
-      scheduleSave();
-      render();
-    };
-  });
-  document.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = btn.dataset.del;
-      events = events.filter(e => e.id !== id);
-      delete assignments[id];
-      if(!deletedIds.includes(id)) deletedIds.push(id);
-      editingId = null;
-      scheduleSave(true);
-      render();
-    };
-  });
+function bindGridOnce(){
+  const grid = document.getElementById("grid");
+  grid.addEventListener("click", onGridClick);
+  grid.addEventListener("dblclick", onGridDblClick);
 }
 
-function refreshCardPreview(id){
-  const ev = findEvent(id);
-  if(!ev) return;
-  const fields = document.querySelector(`[data-fields="${id}"]`);
-  const card = fields?.closest(".event");
-  if(!card) return;
-  const time = card.querySelector(".time");
-  const activity = card.querySelector(".activity");
-  if(time) time.textContent = `${ev.start}–${ev.end}`;
-  if(activity) activity.textContent = ev.activity;
-  let loc = card.querySelector(".loc");
-  if(ev.loc){
-    if(!loc){
-      loc = document.createElement("div");
-      loc.className = "loc";
-      activity?.insertAdjacentElement("afterend", loc);
-    }
-    loc.textContent = ev.loc;
-  }else if(loc){
-    loc.remove();
+function onGridClick(e){
+  const t = e.target;
+  if(!(t instanceof Element)) return;
+  const add = t.closest("[data-add-day]");
+  if(add){
+    addSession(add.getAttribute("data-add-day"));
+    return;
+  }
+  const edit = t.closest("[data-edit]");
+  if(edit){
+    e.preventDefault();
+    e.stopPropagation();
+    openEditModal(edit.getAttribute("data-edit"));
+    return;
+  }
+  const del = t.closest("[data-del]");
+  if(del){
+    e.preventDefault();
+    e.stopPropagation();
+    const id = del.getAttribute("data-del");
+    events = events.filter(ev => ev.id !== id);
+    delete assignments[id];
+    if(!deletedIds.includes(id)) deletedIds.push(id);
+    if(editingId === id) closeEditModal(false);
+    scheduleSave(true);
+    render();
+    return;
+  }
+  const ics = t.closest("[data-ics]");
+  if(ics){
+    e.preventDefault();
+    e.stopPropagation();
+    const ev = findEvent(ics.getAttribute("data-ics"));
+    if(ev) downloadIcs(ev);
+    return;
+  }
+  const kid = t.closest(".kid-btn");
+  if(kid){
+    e.preventDefault();
+    e.stopPropagation();
+    const id = kid.getAttribute("data-id");
+    const which = kid.getAttribute("data-kid");
+    const a = getAssign(id);
+    a[which] = !a[which];
+    scheduleSave();
+    render();
   }
 }
 
-function updateEvent(id, field, value, rerender){
+function onGridDblClick(e){
+  const t = e.target;
+  if(!(t instanceof Element)) return;
+  if(t.closest(".kid-btn, .card-actions, [data-add-day]")) return;
+  const card = t.closest(".event");
+  if(card) openEditModal(card.getAttribute("data-id"));
+}
+
+function setOptionalToggle(on){
+  const btn = document.getElementById("editOptional");
+  btn.setAttribute("aria-pressed", on ? "true" : "false");
+  btn.querySelector(".material-symbols-outlined").textContent = on ? "toggle_on" : "toggle_off";
+}
+
+function fillEditSelects(){
+  document.getElementById("editClub").innerHTML = optionsHtml(CLUBS, "", false);
+  document.getElementById("editSport").innerHTML = optionsHtml(SPORTS, "", true);
+  document.getElementById("editDay").innerHTML = DAYS.map(d => `<option value="${d}">${d}</option>`).join("");
+}
+
+function openEditModal(id){
   const ev = findEvent(id);
   if(!ev) return;
-  ev[field] = value;
-  scheduleSave();
-  if(rerender){
+  editingId = id;
+  hideAddrSuggest();
+  fillEditSelects();
+  document.getElementById("editClub").value = ev.club || "tri";
+  document.getElementById("editSport").value = ev.sport || "";
+  document.getElementById("editDay").value = ev.day;
+  document.getElementById("editStart").value = ev.start || "";
+  document.getElementById("editEnd").value = ev.end || "";
+  document.getElementById("editActivity").value = ev.activity || "";
+  document.getElementById("editLoc").value = ev.loc || "";
+  setOptionalToggle(!!ev.optional);
+  document.getElementById("editModalTitle").textContent =
+    ev.activity && ev.activity !== "Nouvelle séance" ? ev.activity : "Modifier la séance";
+  const modal = document.getElementById("editModal");
+  if(typeof modal.showModal === "function") modal.showModal();
+  else modal.setAttribute("open", "");
+  document.getElementById("editActivity").focus();
+  document.getElementById("editActivity").select();
+}
+
+function closeEditModal(save){
+  if(save) applyModalToEvent();
+  hideAddrSuggest();
+  const modal = document.getElementById("editModal");
+  if(modal.open && typeof modal.close === "function") modal.close();
+  else modal.removeAttribute("open");
+  editingId = null;
+  if(save){
+    scheduleSave(true);
     render();
-    const el = document.querySelector(`[data-field="${field}"][data-id="${id}"]`);
-    if(el) el.focus();
-  }else{
-    refreshCardPreview(id);
+  }
+}
+
+function applyModalToEvent(){
+  const ev = findEvent(editingId);
+  if(!ev) return;
+  ev.club = document.getElementById("editClub").value;
+  ev.sport = document.getElementById("editSport").value;
+  ev.day = document.getElementById("editDay").value;
+  ev.start = document.getElementById("editStart").value.trim() || ev.start;
+  ev.end = document.getElementById("editEnd").value.trim() || ev.end;
+  ev.activity = document.getElementById("editActivity").value.trim() || ev.activity;
+  ev.loc = document.getElementById("editLoc").value.trim();
+  ev.optional = document.getElementById("editOptional").getAttribute("aria-pressed") === "true";
+}
+
+function stripHtml(html){
+  return String(html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function hideAddrSuggest(){
+  const box = document.getElementById("addrSuggest");
+  box.hidden = true;
+  box.innerHTML = "";
+}
+
+let addrTimer = null;
+let addrReq = 0;
+const GENEVA_BBOX = "496000,114000,506000,123000";
+
+async function searchSwissAddress(query){
+  const q = query.trim();
+  if(q.length < 3){
+    hideAddrSuggest();
+    return;
+  }
+  const n = ++addrReq;
+  try{
+    const params = new URLSearchParams({
+      searchText: q,
+      type: "locations",
+      origins: "address,gg25,gazetteer",
+      limit: "8",
+      lang: "fr",
+      bbox: GENEVA_BBOX,
+      sortbbox: "true"
+    });
+    let res = await fetch(`https://api3.geo.admin.ch/rest/services/api/SearchServer?${params}`);
+    if(!res.ok) return;
+    let data = await res.json();
+    if(n !== addrReq) return;
+    let rows = Array.isArray(data.results) ? data.results : [];
+    if(!rows.length){
+      params.delete("bbox");
+      params.delete("sortbbox");
+      res = await fetch(`https://api3.geo.admin.ch/rest/services/api/SearchServer?${params}`);
+      if(!res.ok) return;
+      data = await res.json();
+      if(n !== addrReq) return;
+      rows = Array.isArray(data.results) ? data.results : [];
+    }
+    const box = document.getElementById("addrSuggest");
+    box.innerHTML = "";
+    const seen = new Set();
+    rows.forEach(row => {
+      const attrs = row.attrs || {};
+      const label = stripHtml(attrs.label || attrs.detail || "");
+      if(!label || seen.has(label.toLowerCase())) return;
+      seen.add(label.toLowerCase());
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = label;
+      btn.addEventListener("click", ()=>{
+        document.getElementById("editLoc").value = label;
+        hideAddrSuggest();
+        document.getElementById("editLoc").focus();
+      });
+      li.appendChild(btn);
+      box.appendChild(li);
+    });
+    box.hidden = box.childElementCount === 0;
+  }catch(_){
+    if(n === addrReq) hideAddrSuggest();
   }
 }
 
 function addSession(day){
-  const id = 'custom_' + Date.now();
+  const id = "custom_" + Date.now();
   deletedIds = deletedIds.filter(x => x !== id);
   events.push({
     id, day, start:"18:00", end:"19:00",
     club:"tri", sport:"swim", activity:"Nouvelle séance", loc:"", optional:false
   });
-  editingId = id;
   scheduleSave(true);
   render();
+  openEditModal(id);
 }
 
 document.getElementById('tokenInput').value = localStorage.getItem(TOKEN_KEY) || "";
 fillKidNameInputs();
 syncTokenChrome();
 document.getElementById('saveBtn').disabled = true;
+bindGridOnce();
+
+document.getElementById('editForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  closeEditModal(true);
+});
+document.getElementById('editCloseBtn').addEventListener('click', ()=> closeEditModal(false));
+document.getElementById('editCancelBtn').addEventListener('click', ()=> closeEditModal(false));
+document.getElementById('editModal').addEventListener('close', ()=>{
+  hideAddrSuggest();
+  if(editingId) editingId = null;
+});
+document.getElementById('editOptional').addEventListener('click', ()=>{
+  const on = document.getElementById('editOptional').getAttribute('aria-pressed') !== 'true';
+  setOptionalToggle(on);
+});
+document.getElementById('editLoc').addEventListener('input', ()=>{
+  clearTimeout(addrTimer);
+  const q = document.getElementById('editLoc').value;
+  addrTimer = setTimeout(()=> searchSwissAddress(q), 280);
+});
+document.getElementById('editLoc').addEventListener('keydown', (e)=>{
+  if(e.key === "Escape"){
+    hideAddrSuggest();
+    e.stopPropagation();
+  }
+});
 
 document.getElementById('settingsBtn').addEventListener('click', ()=>{
   const drawer = document.getElementById('settingsDrawer');
@@ -1400,7 +1638,10 @@ document.getElementById('settingsBtn').addEventListener('click', ()=>{
 document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
 document.getElementById('drawerBackdrop').addEventListener('click', closeSettings);
 document.addEventListener('keydown', (e)=>{
-  if(e.key === 'Escape') closeSettings();
+  if(e.key !== 'Escape') return;
+  const modal = document.getElementById('editModal');
+  if(modal.open) return;
+  closeSettings();
 });
 
 function refreshKidLabels(kid){

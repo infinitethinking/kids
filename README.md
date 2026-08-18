@@ -2,7 +2,7 @@
 
 Weekly training planner: https://infinitethinking.github.io/kids/
 
-Clicks on O/L, edits, and extra sessions are stored in [`planner-data.json`](planner-data.json). Edits auto-save to GitHub a moment after you change a séance (the save icon still works as a backup). The browser also keeps a local copy so a refresh does not drop work.
+Clicks on O/L, edits, and extra sessions are stored in [`planner-data.json`](planner-data.json). Double-click a séance (or the pencil) to edit it in a dialog; the location field uses the Swiss geo.admin.ch address search. Edits auto-save to GitHub.
 
 ## Save from the planner
 
