@@ -204,13 +204,24 @@
     padding:10px;
     min-height:120px;
   }
-  .day-col h2{
-    font-size:13px;
-    text-transform:uppercase;
-    letter-spacing:1px;
+  .day-col-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
     margin:0 0 10px;
     padding-bottom:6px;
     border-bottom:1px solid var(--line);
+  }
+  .day-col-head h2{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    margin:0;
+  }
+  .day-col-head .icon-btn{
+    width:28px;
+    height:28px;
   }
 
   .event{
@@ -254,9 +265,19 @@
     font-size:11px;
     margin-top:1px;
   }
+  .event.optional{
+    outline:2px dotted var(--ink);
+    outline-offset:1px;
+  }
+  .event.optional.club-tri{outline-color:var(--tri);}
+  .event.optional.club-bmx{outline-color:var(--bmx);}
+  .event.optional.club-stade{outline-color:var(--stade);}
   .event.conflict{
     outline:2px solid var(--warn);
     outline-offset:1px;
+  }
+  .event.optional.conflict{
+    outline:2px dotted var(--warn);
   }
   .conflict-flag{
     color:var(--warn);
@@ -291,7 +312,27 @@
     gap:5px;
     flex-direction:column;
   }
-  .edit-fields.show{display:flex;}
+  .opt-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:11.5px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .opt-switch{
+    border:none;
+    background:none;
+    padding:0;
+    cursor:pointer;
+    display:inline-flex;
+    color:#8a8271;
+  }
+  .opt-switch .material-symbols-outlined{font-size:28px;}
+  .opt-switch[aria-pressed="true"] .material-symbols-outlined{
+    font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;
+    color:var(--ink);
+  }
   .edit-fields input, .edit-fields select{
     font-size:11px;
     padding:3px 5px;
@@ -391,9 +432,6 @@
 <div class="sub" id="pageSub">Clique sur un enfant pour l'assigner à une séance. Utilise l'icône modifier pour le club, le sport, le jour ou l'horaire.</div>
 
 <div class="toolbar">
-  <button class="icon-btn" id="addEventBtn" type="button" title="Ajouter une séance" aria-label="Ajouter une séance">
-    <span class="material-symbols-outlined">calendar_add_on</span>
-  </button>
   <div class="save-bar">
     <button class="icon-btn ghost" id="settingsBtn" type="button" title="Réglages" aria-label="Réglages" aria-expanded="false" aria-controls="settingsDrawer">
       <span class="material-symbols-outlined">settings</span>
@@ -555,7 +593,8 @@ function normalizeEvent(raw){
     loc: raw.loc || "",
     club,
     sport,
-    verify: !!raw.verify
+    verify: !!raw.verify,
+    optional: !!raw.optional
   };
 }
 
@@ -949,7 +988,12 @@ function render(){
     col.className = 'day-col';
     const dayEvents = events.filter(e=>e.day===day).sort((a,b)=>toMinutes(a.start)-toMinutes(b.start));
 
-    let html = `<h2>${day}</h2>`;
+    let html = `<div class="day-col-head">
+      <h2>${day}</h2>
+      <button class="icon-btn ghost" data-add-day="${day}" type="button" title="Ajouter une séance" aria-label="Ajouter une séance le ${day}">
+        <span class="material-symbols-outlined">calendar_add_on</span>
+      </button>
+    </div>`;
     if(dayEvents.length===0){
       html += `<div class="empty">—</div>`;
     }
@@ -963,7 +1007,7 @@ function render(){
       const cL = a.L && conflictsFor(ev,'L');
       const club = clubById(ev.club);
       const div = document.createElement('div');
-      div.className = `event club-${club.id}` + ((cO||cL) ? ' conflict' : '');
+      div.className = `event club-${club.id}` + (ev.optional ? ' optional' : '') + ((cO||cL) ? ' conflict' : '');
       div.innerHTML = `
         <div class="card-actions">
           <button class="icon-btn" data-ics="${ev.id}" type="button" title="Télécharger le calendrier" aria-label="Télécharger le calendrier">
@@ -1002,6 +1046,12 @@ function render(){
           <input type="text" data-field="end" data-id="${ev.id}" value="${ev.end}" placeholder="HH:MM">
           <input type="text" data-field="activity" data-id="${ev.id}" value="${esc(ev.activity)}">
           <input type="text" data-field="loc" data-id="${ev.id}" value="${esc(ev.loc||'')}" placeholder="Lieu">
+          <div class="opt-row">
+            <button class="opt-switch" data-optional="${ev.id}" type="button" title="Séance optionnelle" aria-label="Séance optionnelle" aria-pressed="${ev.optional?'true':'false'}">
+              <span class="material-symbols-outlined">${ev.optional?'toggle_on':'toggle_off'}</span>
+            </button>
+            Optionnel
+          </div>
         </div>
       `;
       col.appendChild(div);
@@ -1090,6 +1140,17 @@ function attachHandlers(){
       if(ev) downloadIcs(ev);
     };
   });
+  document.querySelectorAll('[data-add-day]').forEach(btn=>{
+    btn.onclick = ()=> addSession(btn.dataset.addDay);
+  });
+  document.querySelectorAll('[data-optional]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const ev = findEvent(btn.dataset.optional);
+      if(!ev) return;
+      ev.optional = !ev.optional;
+      render();
+    };
+  });
   document.querySelectorAll('[data-del]').forEach(btn=>{
     btn.onclick = ()=>{
       const id = btn.dataset.del;
@@ -1108,15 +1169,15 @@ function updateEvent(id, field, value){
   render();
 }
 
-document.getElementById('addEventBtn').addEventListener('click', ()=>{
+function addSession(day){
   const id = 'custom_' + Date.now();
   events.push({
-    id, day:"Lundi", start:"18:00", end:"19:00",
-    club:"tri", sport:"swim", activity:"Nouvelle séance", loc:""
+    id, day, start:"18:00", end:"19:00",
+    club:"tri", sport:"swim", activity:"Nouvelle séance", loc:"", optional:false
   });
   editingId = id;
   render();
-});
+}
 
 document.getElementById('tokenInput').value = localStorage.getItem(TOKEN_KEY) || "";
 fillKidNameInputs();
