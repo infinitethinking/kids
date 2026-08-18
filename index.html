@@ -323,6 +323,13 @@
   }
   .kid-btn.on-O{background:var(--o-color);border-color:var(--o-color);color:#fff;}
   .kid-btn.on-L{background:var(--l-color);border-color:var(--l-color);color:#fff;}
+  .modal-kids{
+    margin-top:0;
+  }
+  .modal-kids .kid-btn{
+    padding:8px 10px;
+    font-size:13px;
+  }
 
   .modal-overlay{
     position:fixed;
@@ -640,6 +647,12 @@
     </div>
     <label>Activité
       <input id="editActivity" type="text" placeholder="Natation, BMX…" autocomplete="off">
+    </label>
+    <label>Enfants
+      <div class="kid-row modal-kids">
+        <button class="kid-btn" id="editKidO" type="button" data-kid="O" aria-pressed="false"></button>
+        <button class="kid-btn" id="editKidL" type="button" data-kid="L" aria-pressed="false"></button>
+      </div>
     </label>
     <label>Lieu
       <div class="addr-wrap">
@@ -1516,6 +1529,21 @@ function setOptionalToggle(on){
   btn.querySelector(".material-symbols-outlined").textContent = on ? "toggle_on" : "toggle_off";
 }
 
+function setModalKid(kid, on){
+  const btn = document.getElementById("editKid" + kid);
+  if(!btn) return;
+  btn.textContent = kidLabel(kid);
+  btn.setAttribute("aria-pressed", on ? "true" : "false");
+  btn.classList.toggle("on-O", kid === "O" && on);
+  btn.classList.toggle("on-L", kid === "L" && on);
+}
+
+function fillModalKids(id){
+  const a = getAssign(id);
+  setModalKid("O", !!a.O);
+  setModalKid("L", !!a.L);
+}
+
 function fillEditSelects(){
   document.getElementById("editClub").innerHTML = optionsHtml(CLUBS, "", false);
   document.getElementById("editSport").innerHTML = optionsHtml(SPORTS, "", true);
@@ -1548,6 +1576,7 @@ function openEditModal(id){
   document.getElementById("editLoc").value = ev.loc || "";
   document.getElementById("addrHint").textContent = "Tape 3 lettres : adresses suisses (geo.admin.ch)";
   setOptionalToggle(ev.optional === true);
+  fillModalKids(id);
   document.getElementById("editModalTitle").textContent = isNewEvent ? "Nouvelle séance" : "Modifier la séance";
   const overlay = document.getElementById("editOverlay");
   overlay.hidden = false;
@@ -1587,6 +1616,9 @@ function applyModalToEvent(){
   ev.activity = document.getElementById("editActivity").value.trim() || "Séance";
   ev.loc = document.getElementById("editLoc").value.trim();
   ev.optional = document.getElementById("editOptional").getAttribute("aria-pressed") === "true";
+  const a = getAssign(ev.id);
+  a.O = document.getElementById("editKidO").getAttribute("aria-pressed") === "true";
+  a.L = document.getElementById("editKidL").getAttribute("aria-pressed") === "true";
 }
 
 function stripHtml(html){
@@ -1701,6 +1733,14 @@ document.getElementById('editOptional').addEventListener('click', ()=>{
   setOptionalToggle(on);
   const ev = findEvent(editingId);
   if(ev) ev.optional = on;
+});
+document.getElementById('editKidO').addEventListener('click', ()=>{
+  const on = document.getElementById('editKidO').getAttribute('aria-pressed') !== 'true';
+  setModalKid("O", on);
+});
+document.getElementById('editKidL').addEventListener('click', ()=>{
+  const on = document.getElementById('editKidL').getAttribute('aria-pressed') !== 'true';
+  setModalKid("L", on);
 });
 document.getElementById('editLoc').addEventListener('input', ()=>{
   clearTimeout(addrTimer);
