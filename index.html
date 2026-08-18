@@ -124,20 +124,66 @@
     gap:8px;
     align-items:center;
   }
-  .token-wrap{
-    display:none;
+
+  .drawer-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(27,36,48,0.35);
+    z-index:40;
+    border:none;
+    padding:0;
+    cursor:pointer;
   }
-  .token-wrap.open{display:block;}
-  .token-wrap input[type="password"]{
-    font-size:13px;
-    padding:8px 12px;
+  .drawer-backdrop[hidden]{display:none;}
+  .drawer{
+    position:fixed;
+    top:0;
+    right:0;
+    width:min(360px,100%);
+    height:100%;
+    background:var(--paper);
+    z-index:50;
+    transform:translateX(100%);
+    transition:transform 0.2s ease;
+    box-shadow:-8px 0 24px rgba(27,36,48,0.16);
+    padding:18px 18px 32px;
+    overflow:auto;
+  }
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .drawer-head h2{
+    margin:0;
+    font-size:16px;
+  }
+  .drawer-field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-bottom:16px;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .drawer-field input{
+    font-size:14px;
+    font-weight:500;
+    padding:9px 12px;
     border:1px solid var(--line);
-    border-radius:999px;
-    min-width:220px;
-    width:min(360px,70vw);
+    border-radius:8px;
     background:#fff;
     color:var(--ink);
   }
+  .token-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .token-row input{flex:1;min-width:0;}
   .icon-btn.edit-toggle{
     width:24px;
     height:24px;
@@ -236,11 +282,12 @@
     border-radius:6px;
     border:1px solid #b9b2a1;
     background:#fff;
-    padding:4px 0;
+    padding:4px 6px;
     font-size:11.5px;
     font-weight:700;
     cursor:pointer;
     color:#8a8271;
+    min-width:0;
   }
   .kid-btn.on-O{background:var(--o-color);border-color:var(--o-color);color:#fff;}
   .kid-btn.on-L{background:var(--l-color);border-color:var(--l-color);color:#fff;}
@@ -337,8 +384,8 @@
 </head>
 <body>
 
-<h1>Planning hebdomadaire — O &amp; L</h1>
-<div class="sub">Triathlon (TCG), BMX et Athlétisme — clique sur O / L sur une séance pour l'assigner. Utilise l'icône modifier pour corriger un jour/horaire si besoin (l'extraction du PDF n'est pas garantie à 100%).</div>
+<h1 id="pageTitle">Planning hebdomadaire — O &amp; L</h1>
+<div class="sub" id="pageSub">Triathlon (TCG), BMX et Athlétisme — clique sur O / L sur une séance pour l'assigner. Utilise l'icône modifier pour corriger un jour/horaire si besoin (l'extraction du PDF n'est pas garantie à 100%).</div>
 
 <div class="toolbar">
   <div class="season-toggle" id="seasonToggle">
@@ -352,14 +399,8 @@
     <span class="material-symbols-outlined">restart_alt</span>
   </button>
   <div class="save-bar">
-    <button class="icon-btn ghost" id="tokenToggleBtn" type="button" title="Jeton GitHub" aria-label="Jeton GitHub" aria-expanded="false">
-      <span class="material-symbols-outlined">add</span>
-    </button>
-    <div class="token-wrap" id="tokenWrap">
-      <input type="password" id="tokenInput" placeholder="Jeton GitHub" autocomplete="off" spellcheck="false">
-    </div>
-    <button class="icon-btn danger" id="forgetTokenBtn" type="button" title="Oublier le jeton" aria-label="Oublier le jeton" hidden>
-      <span class="material-symbols-outlined">delete</span>
+    <button class="icon-btn ghost" id="settingsBtn" type="button" title="Réglages" aria-label="Réglages" aria-expanded="false" aria-controls="settingsDrawer">
+      <span class="material-symbols-outlined">settings</span>
     </button>
     <button class="icon-btn" id="saveBtn" type="button" title="Enregistrer" aria-label="Enregistrer">
       <span class="material-symbols-outlined">save</span>
@@ -376,11 +417,11 @@
 
 <div class="summary">
   <div class="card">
-    <h3 class="O">Séances de O</h3>
+    <h3 class="O" id="titleO">Séances de O</h3>
     <ul id="listO"></ul>
   </div>
   <div class="card">
-    <h3 class="L">Séances de L</h3>
+    <h3 class="L" id="titleL">Séances de L</h3>
     <ul id="listL"></ul>
   </div>
 </div>
@@ -389,6 +430,33 @@
   <h3>Planning final par jour</h3>
   <div class="week-cards" id="weekCards"></div>
 </div>
+
+<button class="drawer-backdrop" id="drawerBackdrop" type="button" hidden aria-label="Fermer les réglages"></button>
+<aside class="drawer" id="settingsDrawer" aria-hidden="true">
+  <div class="drawer-head">
+    <h2>Réglages</h2>
+    <button class="icon-btn ghost" id="closeSettingsBtn" type="button" title="Fermer" aria-label="Fermer">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </div>
+  <label class="drawer-field">
+    Enfant 1
+    <input type="text" id="kidNameO" maxlength="24" autocomplete="off" spellcheck="false">
+  </label>
+  <label class="drawer-field">
+    Enfant 2
+    <input type="text" id="kidNameL" maxlength="24" autocomplete="off" spellcheck="false">
+  </label>
+  <label class="drawer-field">
+    Jeton GitHub
+    <div class="token-row">
+      <input type="password" id="tokenInput" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+      <button class="icon-btn danger" id="forgetTokenBtn" type="button" title="Oublier le jeton" aria-label="Oublier le jeton" hidden>
+        <span class="material-symbols-outlined">delete</span>
+      </button>
+    </div>
+  </label>
+</aside>
 
 <script>
 const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
@@ -446,6 +514,8 @@ let assignments = {}; // eventId -> {O:bool, L:bool}
 let customEvents = []; // user-added events, persists across season toggle (tagged with season:"A"/"B"/"both")
 let editingId = null;
 let hiddenIds = new Set(); // ids of built-in sessions the user removed from view
+let kidNames = {O:"O", L:"L"};
+const KID_IDS = ["O","L"];
 
 const GH_OWNER = "infinitethinking";
 const GH_REPO = "kids";
@@ -458,16 +528,66 @@ function getToken(){
   return (document.getElementById("tokenInput")?.value || localStorage.getItem(TOKEN_KEY) || "").trim();
 }
 
+function esc(str){
+  return String(str).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function kidLabel(id){
+  const n = (kidNames[id] || id).trim();
+  return n || id;
+}
+
+function readKidNamesFromInputs(){
+  const o = document.getElementById("kidNameO")?.value.trim();
+  const l = document.getElementById("kidNameL")?.value.trim();
+  kidNames = {O: o || "O", L: l || "L"};
+}
+
+function fillKidNameInputs(){
+  const o = document.getElementById("kidNameO");
+  const l = document.getElementById("kidNameL");
+  if(o) o.value = kidNames.O || "O";
+  if(l) l.value = kidNames.L || "L";
+}
+
+function updateKidChrome(){
+  const o = kidLabel("O");
+  const l = kidLabel("L");
+  document.title = `Planning entraînements — ${o} & ${l}`;
+  const title = document.getElementById("pageTitle");
+  const sub = document.getElementById("pageSub");
+  const titleO = document.getElementById("titleO");
+  const titleL = document.getElementById("titleL");
+  if(title) title.textContent = `Planning hebdomadaire — ${o} & ${l}`;
+  if(sub) sub.textContent = `Triathlon (TCG), BMX et Athlétisme — clique sur ${o} / ${l} sur une séance pour l'assigner. Utilise l'icône modifier pour corriger un jour/horaire si besoin (l'extraction du PDF n'est pas garantie à 100%).`;
+  if(titleO) titleO.textContent = `Séances de ${o}`;
+  if(titleL) titleL.textContent = `Séances de ${l}`;
+}
+
 function syncTokenChrome(){
-  const hasToken = !!getToken();
-  const wrap = document.getElementById("tokenWrap");
-  const toggle = document.getElementById("tokenToggleBtn");
   const forget = document.getElementById("forgetTokenBtn");
-  const open = wrap.classList.contains("open");
-  forget.hidden = !hasToken;
-  toggle.classList.toggle("open", open);
-  toggle.setAttribute("aria-expanded", open ? "true" : "false");
-  toggle.querySelector(".material-symbols-outlined").textContent = open ? "close" : "add";
+  if(forget) forget.hidden = !getToken();
+}
+
+function openSettings(focusToken){
+  document.getElementById("settingsDrawer").classList.add("open");
+  document.getElementById("settingsDrawer").setAttribute("aria-hidden","false");
+  document.getElementById("drawerBackdrop").hidden = false;
+  document.getElementById("settingsBtn").classList.add("open");
+  document.getElementById("settingsBtn").setAttribute("aria-expanded","true");
+  fillKidNameInputs();
+  syncTokenChrome();
+  if(focusToken) document.getElementById("tokenInput").focus();
+}
+
+function closeSettings(){
+  document.getElementById("settingsDrawer").classList.remove("open");
+  document.getElementById("settingsDrawer").setAttribute("aria-hidden","true");
+  document.getElementById("drawerBackdrop").hidden = true;
+  document.getElementById("settingsBtn").classList.remove("open");
+  document.getElementById("settingsBtn").setAttribute("aria-expanded","false");
 }
 
 function markSave(ok, errMsg){
@@ -478,9 +598,7 @@ function markSave(ok, errMsg){
   if(ok){
     setTimeout(() => btn.classList.remove("ok"), 1600);
   }else if(!getToken()){
-    document.getElementById("tokenWrap").classList.add("open");
-    syncTokenChrome();
-    document.getElementById("tokenInput").focus();
+    openSettings(true);
   }
 }
 
@@ -532,6 +650,7 @@ function applyEventPatches(patches){
 }
 
 function serializeState(){
+  readKidNamesFromInputs();
   const compactAssignments = {};
   Object.entries(assignments).forEach(([id, a]) => {
     if(a && (a.O || a.L)) compactAssignments[id] = {O: !!a.O, L: !!a.L};
@@ -543,7 +662,8 @@ function serializeState(){
     assignments: compactAssignments,
     customEvents,
     hiddenIds: [...hiddenIds],
-    eventPatches: collectEventPatches()
+    eventPatches: collectEventPatches(),
+    kidNames: {O: kidLabel("O"), L: kidLabel("L")}
   };
 }
 
@@ -553,7 +673,14 @@ function applyState(data){
   assignments = data.assignments && typeof data.assignments === "object" ? data.assignments : {};
   customEvents = Array.isArray(data.customEvents) ? data.customEvents : [];
   hiddenIds = new Set(Array.isArray(data.hiddenIds) ? data.hiddenIds : []);
+  if(data.kidNames && typeof data.kidNames === "object"){
+    kidNames = {
+      O: (data.kidNames.O || "O").trim() || "O",
+      L: (data.kidNames.L || "L").trim() || "L"
+    };
+  }
   applyEventPatches(data.eventPatches);
+  fillKidNameInputs();
 }
 
 async function fetchRemoteState(){
@@ -644,6 +771,7 @@ function conflictsFor(ev, kid){
 }
 
 function render(){
+  updateKidChrome();
   document.querySelectorAll('#seasonToggle button').forEach(b=>{
     b.classList.toggle('active', b.dataset.season === season);
   });
@@ -665,6 +793,8 @@ function render(){
 
     dayEvents.forEach(ev=>{
       const a = getAssign(ev.id);
+      const oName = kidLabel("O");
+      const lName = kidLabel("L");
       const cO = a.O && conflictsFor(ev,'O');
       const cL = a.L && conflictsFor(ev,'L');
       const div = document.createElement('div');
@@ -674,13 +804,13 @@ function render(){
           <span class="material-symbols-outlined">edit</span>
         </button>
         <div class="time">${ev.start}–${ev.end}</div>
-        <div class="activity">${ev.activity}</div>
-        ${ev.loc ? `<div class="loc">${ev.loc}</div>` : ''}
+        <div class="activity">${esc(ev.activity)}</div>
+        ${ev.loc ? `<div class="loc">${esc(ev.loc)}</div>` : ''}
         ${ev.verify ? `<div class="conflict-flag"><span class="material-symbols-outlined">warning</span>jour/heure à vérifier</div>` : ''}
-        ${(cO||cL) ? `<div class="conflict-flag"><span class="material-symbols-outlined">warning</span>chevauchement pour ${cO?'O':''}${cO&&cL?' & ':''}${cL?'L':''}</div>` : ''}
+        ${(cO||cL) ? `<div class="conflict-flag"><span class="material-symbols-outlined">warning</span>chevauchement pour ${cO?esc(oName):''}${cO&&cL?' & ':''}${cL?esc(lName):''}</div>` : ''}
         <div class="kid-row">
-          <button class="kid-btn ${a.O?'on-O':''}" data-kid="O" data-id="${ev.id}">O</button>
-          <button class="kid-btn ${a.L?'on-L':''}" data-kid="L" data-id="${ev.id}">L</button>
+          <button class="kid-btn ${a.O?'on-O':''}" data-kid="O" data-id="${ev.id}">${esc(oName)}</button>
+          <button class="kid-btn ${a.L?'on-L':''}" data-kid="L" data-id="${ev.id}">${esc(lName)}</button>
         </div>
         <div class="edit-fields ${editingId===ev.id?'show':''}" data-fields="${ev.id}">
           <select data-field="day" data-id="${ev.id}">
@@ -688,8 +818,8 @@ function render(){
           </select>
           <input type="text" data-field="start" data-id="${ev.id}" value="${ev.start}" placeholder="HH:MM">
           <input type="text" data-field="end" data-id="${ev.id}" value="${ev.end}" placeholder="HH:MM">
-          <input type="text" data-field="activity" data-id="${ev.id}" value="${ev.activity}">
-          <input type="text" data-field="loc" data-id="${ev.id}" value="${ev.loc||''}" placeholder="Lieu">
+          <input type="text" data-field="activity" data-id="${ev.id}" value="${esc(ev.activity)}">
+          <input type="text" data-field="loc" data-id="${ev.id}" value="${esc(ev.loc||'')}" placeholder="Lieu">
           <button class="icon-btn del-btn" data-del="${ev.id}" type="button" title="Supprimer cette séance" aria-label="Supprimer cette séance">
             <span class="material-symbols-outlined">delete</span>
           </button>
@@ -722,11 +852,11 @@ function renderWeekCards(evs){
       .sort((a,b)=>toMinutes(a.start)-toMinutes(b.start));
     const itemsHtml = items.map(e=>{
       const a = getAssign(e.id);
-      const chips = ['O','L'].filter(k=>a[k]).map(k=>`<span class="kid-chip ${k}">${k}</span>`).join('');
+      const chips = KID_IDS.filter(k=>a[k]).map(k=>`<span class="kid-chip ${k}">${esc(kidLabel(k))}</span>`).join('');
       return `
         <div class="day-summary-item ${e.type}">
           <div class="t">${e.start}–${e.end}</div>
-          <div class="a">${e.activity}${e.loc ? ' — '+e.loc : ''}</div>
+          <div class="a">${esc(e.activity)}${e.loc ? ' — '+esc(e.loc) : ''}</div>
           <div class="kids">${chips}</div>
         </div>
       `;
@@ -736,7 +866,7 @@ function renderWeekCards(evs){
 }
 
 function renderSummary(evs){
-  ['O','L'].forEach(kid=>{
+  KID_IDS.forEach(kid=>{
     const list = document.getElementById('list'+kid);
     const items = evs.filter(e=>getAssign(e.id)[kid])
       .sort((a,b)=> DAYS.indexOf(a.day)-DAYS.indexOf(b.day) || toMinutes(a.start)-toMinutes(b.start));
@@ -746,7 +876,7 @@ function renderSummary(evs){
     }
     list.innerHTML = items.map(e=>{
       const conf = conflictsFor(e,kid);
-      return `<li class="${conf?'conflict-item':''}">${conf?'<span class="material-symbols-outlined">warning</span> ':''}${e.day} ${e.start}–${e.end} — ${e.activity}${e.loc? ' ('+e.loc+')':''}</li>`;
+      return `<li class="${conf?'conflict-item':''}">${conf?'<span class="material-symbols-outlined">warning</span> ':''}${e.day} ${e.start}–${e.end} — ${esc(e.activity)}${e.loc? ' ('+esc(e.loc)+')':''}</li>`;
     }).join('');
   });
 }
@@ -824,14 +954,27 @@ document.getElementById('addEventBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('tokenInput').value = localStorage.getItem(TOKEN_KEY) || "";
+fillKidNameInputs();
 syncTokenChrome();
 
-document.getElementById('tokenToggleBtn').addEventListener('click', ()=>{
-  document.getElementById('tokenWrap').classList.toggle('open');
-  syncTokenChrome();
-  if(document.getElementById('tokenWrap').classList.contains('open')){
-    document.getElementById('tokenInput').focus();
-  }
+document.getElementById('settingsBtn').addEventListener('click', ()=>{
+  const drawer = document.getElementById('settingsDrawer');
+  if(drawer.classList.contains('open')) closeSettings();
+  else openSettings();
+});
+document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
+document.getElementById('drawerBackdrop').addEventListener('click', closeSettings);
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape') closeSettings();
+});
+
+document.getElementById('kidNameO').addEventListener('input', ()=>{
+  readKidNamesFromInputs();
+  render();
+});
+document.getElementById('kidNameL').addEventListener('input', ()=>{
+  readKidNamesFromInputs();
+  render();
 });
 
 document.getElementById('tokenInput').addEventListener('input', syncTokenChrome);
@@ -839,7 +982,6 @@ document.getElementById('tokenInput').addEventListener('input', syncTokenChrome)
 document.getElementById('forgetTokenBtn').addEventListener('click', ()=>{
   localStorage.removeItem(TOKEN_KEY);
   document.getElementById('tokenInput').value = "";
-  document.getElementById('tokenWrap').classList.remove('open');
   document.getElementById('saveBtn').classList.remove('ok','err');
   document.getElementById('saveBtn').title = 'Enregistrer';
   syncTokenChrome();
@@ -850,8 +992,6 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   btn.disabled = true;
   try{
     await saveRemoteState();
-    document.getElementById('tokenWrap').classList.remove('open');
-    syncTokenChrome();
     markSave(true);
   }catch(err){
     markSave(false, err.message || String(err));
