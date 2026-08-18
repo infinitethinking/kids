@@ -229,7 +229,7 @@
     display:flex;
     align-items:flex-start;
     gap:6px;
-    padding-right:48px;
+    padding-right:72px;
   }
   .sport-icon{
     font-size:18px;
@@ -782,6 +782,163 @@ function sportIconHtml(sportId){
   return `<span class="material-symbols-outlined sport-icon" title="${esc(sport.label)}" aria-label="${esc(sport.label)}">${sport.icon}</span>`;
 }
 
+const SCHOOL_YEAR_START = "2026-08-17";
+const SCHOOL_YEAR_END = "2027-07-05";
+const ICS_UNTIL_UTC = "20270704T220000Z";
+const DAY_TO_BYDAY = {Lundi:"MO",Mardi:"TU",Mercredi:"WE",Jeudi:"TH",Vendredi:"FR",Samedi:"SA"};
+const DAY_TO_UTC_WEEKDAY = {Lundi:1,Mardi:2,Mercredi:3,Jeudi:4,Vendredi:5,Samedi:6};
+const HOLIDAY_PERIODS = [
+  ["2026-10-19","2026-10-23"],
+  ["2026-12-24","2027-01-08"],
+  ["2027-02-15","2027-02-19"],
+  ["2027-03-26","2027-04-09"],
+  ["2027-05-06","2027-05-07"]
+];
+const HOLIDAY_DAYS = ["2026-09-10","2027-05-17"];
+
+function pad2(n){
+  return String(n).padStart(2,"0");
+}
+
+function isoFromUtcMs(ms){
+  const d = new Date(ms);
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())}`;
+}
+
+function utcMs(iso){
+  const [y,m,d] = iso.split("-").map(Number);
+  return Date.UTC(y, m-1, d);
+}
+
+function addDaysIso(iso, n){
+  return isoFromUtcMs(utcMs(iso) + n*86400000);
+}
+
+function utcWeekday(iso){
+  return new Date(utcMs(iso)).getUTCDay();
+}
+
+function expandToSaturday(endIso){
+  const w = utcWeekday(endIso);
+  if(w === 0 || w === 6) return endIso;
+  return addDaysIso(endIso, 6 - w);
+}
+
+function eachIsoInclusive(start, end){
+  const out = [];
+  for(let d = start; d <= end; d = addDaysIso(d, 1)) out.push(d);
+  return out;
+}
+
+const HOLIDAY_SET = (()=>{
+  const set = new Set(HOLIDAY_DAYS);
+  HOLIDAY_PERIODS.forEach(([start, end])=>{
+    eachIsoInclusive(start, expandToSaturday(end)).forEach(d => set.add(d));
+  });
+  return set;
+})();
+
+function weeklyDates(weekday, startIso, endExclusive){
+  let d = startIso;
+  while(utcWeekday(d) !== weekday) d = addDaysIso(d, 1);
+  const out = [];
+  while(d < endExclusive){
+    out.push(d);
+    d = addDaysIso(d, 7);
+  }
+  return out;
+}
+
+function icsDateTime(isoDate, hm){
+  const [h, m] = (hm || "00:00").split(":");
+  return isoDate.replace(/-/g,"") + "T" + pad2(Number(h)) + pad2(Number(m)) + "00";
+}
+
+function icsEscape(value){
+  return String(value || "")
+    .replace(/\\/g,"\\\\")
+    .replace(/\n/g,"\\n")
+    .replace(/;/g,"\\;")
+    .replace(/,/g,"\\,");
+}
+
+function icsFold(line){
+  const parts = [];
+  while(line.length > 75){
+    parts.push(line.slice(0,75));
+    line = " " + line.slice(75);
+  }
+  parts.push(line);
+  return parts.join("\r\n");
+}
+
+function eventSummary(ev){
+  const a = getAssign(ev.id);
+  const names = KID_IDS.filter(k => a[k]).map(kidLabel);
+  if(!names.length) return ev.activity;
+  return `${ev.activity} — ${names.join(" & ")}`;
+}
+
+function icsFilename(ev){
+  const slug = (ev.activity || "seance")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-zA-Z0-9]+/g,"-")
+    .replace(/^-|-$/g,"")
+    .slice(0,40);
+  return `${slug || "seance"}-${ev.day}.ics`;
+}
+
+function buildIcs(ev){
+  const weekday = DAY_TO_UTC_WEEKDAY[ev.day];
+  const byday = DAY_TO_BYDAY[ev.day];
+  if(weekday == null || !byday) return "";
+  const dates = weeklyDates(weekday, SCHOOL_YEAR_START, SCHOOL_YEAR_END);
+  const skipped = dates.filter(d => HOLIDAY_SET.has(d) && d > first);
+  const kept = dates.filter(d => !HOLIDAY_SET.has(d));
+  if(!kept.length) return "";
+  const first = kept[0];
+  const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+Z$/,"Z");
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//infinitethinking//kids planner//FR",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:kids-${ev.id}@infinitethinking.github.io`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;TZID=Europe/Zurich:${icsDateTime(first, ev.start)}`,
+    `DTEND;TZID=Europe/Zurich:${icsDateTime(first, ev.end)}`,
+    `RRULE:FREQ=WEEKLY;BYDAY=${byday};UNTIL=${ICS_UNTIL_UTC}`,
+    icsFold("SUMMARY:" + icsEscape(eventSummary(ev)))
+  ];
+  if(ev.loc) lines.push(icsFold("LOCATION:" + icsEscape(ev.loc)));
+  const club = clubById(ev.club);
+  const sport = sportById(ev.sport);
+  const desc = [club.label, sport ? sport.label : ""].filter(Boolean).join(" · ");
+  if(desc) lines.push(icsFold("DESCRIPTION:" + icsEscape(desc)));
+  skipped.forEach(d => {
+    lines.push(`EXDATE;TZID=Europe/Zurich:${icsDateTime(d, ev.start)}`);
+  });
+  lines.push("END:VEVENT", "END:VCALENDAR", "");
+  return lines.join("\r\n");
+}
+
+function downloadIcs(ev){
+  const text = buildIcs(ev);
+  if(!text) return;
+  const blob = new Blob([text], {type:"text/calendar;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = icsFilename(ev);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 function render(){
   updateKidChrome();
   const grid = document.getElementById('grid');
@@ -809,6 +966,9 @@ function render(){
       div.className = `event club-${club.id}` + ((cO||cL) ? ' conflict' : '');
       div.innerHTML = `
         <div class="card-actions">
+          <button class="icon-btn" data-ics="${ev.id}" type="button" title="Télécharger le calendrier" aria-label="Télécharger le calendrier">
+            <span class="material-symbols-outlined">calendar_month</span>
+          </button>
           <button class="icon-btn" data-edit="${ev.id}" type="button" title="Modifier" aria-label="Modifier">
             <span class="material-symbols-outlined">edit</span>
           </button>
@@ -922,6 +1082,12 @@ function attachHandlers(){
     inp.onchange = ()=>{
       const id = inp.dataset.id, field = inp.dataset.field;
       updateEvent(id, field, inp.value);
+    };
+  });
+  document.querySelectorAll('[data-ics]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const ev = findEvent(btn.dataset.ics);
+      if(ev) downloadIcs(ev);
     };
   });
   document.querySelectorAll('[data-del]').forEach(btn=>{
