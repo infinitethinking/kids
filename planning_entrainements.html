@@ -165,27 +165,23 @@
     align-items:center;
   }
   .token-row input{flex:1;min-width:0;}
-  .icon-btn.edit-toggle{
+  .card-actions{
+    position:absolute;
+    top:2px;
+    right:2px;
+    display:flex;
+    gap:0;
+  }
+  .card-actions .icon-btn{
     width:24px;
     height:24px;
     border:none;
     background:transparent;
     color:#8a8271;
-    position:absolute;
-    top:4px;
-    right:4px;
-  }
-  .icon-btn.edit-toggle .material-symbols-outlined{font-size:18px;}
-  .icon-btn.del-btn{
-    width:auto;
-    height:auto;
-    border:none;
-    background:none;
-    color:var(--warn);
     border-radius:4px;
-    margin-top:2px;
-    justify-content:flex-start;
   }
+  .card-actions .icon-btn .material-symbols-outlined{font-size:18px;}
+  .card-actions .del-btn{color:var(--warn);}
   .conflict-flag .material-symbols-outlined{
     font-size:15px;
     vertical-align:-3px;
@@ -233,7 +229,7 @@
     display:flex;
     align-items:flex-start;
     gap:6px;
-    padding-right:18px;
+    padding-right:48px;
   }
   .sport-icon{
     font-size:18px;
@@ -812,9 +808,14 @@ function render(){
       const div = document.createElement('div');
       div.className = `event club-${club.id}` + ((cO||cL) ? ' conflict' : '');
       div.innerHTML = `
-        <button class="icon-btn edit-toggle" data-edit="${ev.id}" type="button" title="Modifier" aria-label="Modifier">
-          <span class="material-symbols-outlined">edit</span>
-        </button>
+        <div class="card-actions">
+          <button class="icon-btn" data-edit="${ev.id}" type="button" title="Modifier" aria-label="Modifier">
+            <span class="material-symbols-outlined">edit</span>
+          </button>
+          <button class="icon-btn del-btn" data-del="${ev.id}" type="button" title="Supprimer cette séance" aria-label="Supprimer cette séance">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        </div>
         <div class="event-head">
           ${sportIconHtml(ev.sport)}
           <div class="time">${ev.start}–${ev.end}</div>
@@ -841,9 +842,6 @@ function render(){
           <input type="text" data-field="end" data-id="${ev.id}" value="${ev.end}" placeholder="HH:MM">
           <input type="text" data-field="activity" data-id="${ev.id}" value="${esc(ev.activity)}">
           <input type="text" data-field="loc" data-id="${ev.id}" value="${esc(ev.loc||'')}" placeholder="Lieu">
-          <button class="icon-btn del-btn" data-del="${ev.id}" type="button" title="Supprimer cette séance" aria-label="Supprimer cette séance">
-            <span class="material-symbols-outlined">delete</span>
-          </button>
         </div>
       `;
       col.appendChild(div);
