@@ -1231,10 +1231,10 @@ function buildIcs(ev){
   const byday = DAY_TO_BYDAY[ev.day];
   if(weekday == null || !byday) return "";
   const dates = weeklyDates(weekday, SCHOOL_YEAR_START, SCHOOL_YEAR_END);
-  const skipped = dates.filter(d => HOLIDAY_SET.has(d) && d > first);
   const kept = dates.filter(d => !HOLIDAY_SET.has(d));
   if(!kept.length) return "";
   const first = kept[0];
+  const skipped = dates.filter(d => HOLIDAY_SET.has(d) && d > first);
   const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+Z$/,"Z");
   const lines = [
     "BEGIN:VCALENDAR",
@@ -1242,6 +1242,23 @@ function buildIcs(ev){
     "PRODID:-//infinitethinking//kids planner//FR",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
+    "BEGIN:VTIMEZONE",
+    "TZID:Europe/Zurich",
+    "BEGIN:DAYLIGHT",
+    "TZOFFSETFROM:+0100",
+    "TZOFFSETTO:+0200",
+    "TZNAME:CEST",
+    "DTSTART:19700329T020000",
+    "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU",
+    "END:DAYLIGHT",
+    "BEGIN:STANDARD",
+    "TZOFFSETFROM:+0200",
+    "TZOFFSETTO:+0100",
+    "TZNAME:CET",
+    "DTSTART:19701025T030000",
+    "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU",
+    "END:STANDARD",
+    "END:VTIMEZONE",
     "BEGIN:VEVENT",
     `UID:kids-${ev.id}@infinitethinking.github.io`,
     `DTSTAMP:${stamp}`,
@@ -1263,8 +1280,18 @@ function buildIcs(ev){
 }
 
 function downloadIcs(ev){
-  const text = buildIcs(ev);
-  if(!text) return;
+  let text = "";
+  try{
+    text = buildIcs(ev);
+  }catch(err){
+    console.error(err);
+    markSave(false, err.message || "Impossible de créer le calendrier");
+    return;
+  }
+  if(!text){
+    markSave(false, "Pas de dates pour cette séance sur 2026–2027");
+    return;
+  }
   const blob = new Blob([text], {type:"text/calendar;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
