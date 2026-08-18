@@ -538,12 +538,15 @@ let events = defaultEvents();
 let assignments = {};
 let editingId = null;
 let kidNames = {O:"O", L:"L"};
+let fileSha = null;
+let plannerReady = false;
 
 const GH_OWNER = "infinitethinking";
 const GH_REPO = "kids";
 const GH_BRANCH = "main";
 const GH_DATA_PATH = "planner-data.json";
 const TOKEN_KEY = "kids-planner-gh-token";
+const LOCAL_KEY = "kids-planner-local-state";
 
 function getToken(){
   return (document.getElementById("tokenInput")?.value || localStorage.getItem(TOKEN_KEY) || "").trim();
@@ -610,16 +613,72 @@ function optionsHtml(list, selected, includeBlank){
 }
 
 function readKidNamesFromInputs(){
-  const o = document.getElementById("kidNameO")?.value.trim();
-  const l = document.getElementById("kidNameL")?.value.trim();
-  kidNames = {O: o || "O", L: l || "L"};
+  const oEl = document.getElementById("kidNameO");
+  const lEl = document.getElementById("kidNameL");
+  const o = (oEl?.value || "").trim();
+  const l = (lEl?.value || "").trim();
+  kidNames = {
+    O: o || kidNames.O || "O",
+    L: l || kidNames.L || "L"
+  };
 }
 
 function fillKidNameInputs(){
   const o = document.getElementById("kidNameO");
   const l = document.getElementById("kidNameL");
-  if(o) o.value = kidNames.O || "O";
-  if(l) l.value = kidNames.L || "L";
+  const active = document.activeElement;
+  if(o && active !== o) o.value = kidNames.O || "O";
+  if(l && active !== l) l.value = kidNames.L || "L";
+}
+
+function flushEditFields(){
+  document.querySelectorAll("[data-field]").forEach(inp=>{
+    const ev = findEvent(inp.dataset.id);
+    if(!ev || !inp.dataset.field) return;
+    ev[inp.dataset.field] = inp.value;
+  });
+}
+
+function loadLocalState(){
+  try{
+    const raw = localStorage.getItem(LOCAL_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch{
+    return null;
+  }
+}
+
+function persistLocal(data){
+  try{
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+  }catch(_){}
+}
+
+function snapshotState(updatedAt){
+  flushEditFields();
+  readKidNamesFromInputs();
+  const compactAssignments = {};
+  Object.entries(assignments).forEach(([id, a]) => {
+    if(a && (a.O || a.L)) compactAssignments[id] = {O: !!a.O, L: !!a.L};
+  });
+  return {
+    version: 2,
+    updatedAt: updatedAt || new Date().toISOString(),
+    assignments: compactAssignments,
+    events: events.map(normalizeEvent),
+    kidNames: {O: kidLabel("O"), L: kidLabel("L")}
+  };
+}
+
+function touchLocal(){
+  if(!plannerReady) return;
+  persistLocal(snapshotState());
+}
+
+function newerState(a, b){
+  if(!a) return b;
+  if(!b) return a;
+  return (a.updatedAt || "") >= (b.updatedAt || "") ? a : b;
 }
 
 function updateKidChrome(){
@@ -696,18 +755,9 @@ function githubHeaders(withAuth){
 }
 
 function serializeState(){
-  readKidNamesFromInputs();
-  const compactAssignments = {};
-  Object.entries(assignments).forEach(([id, a]) => {
-    if(a && (a.O || a.L)) compactAssignments[id] = {O: !!a.O, L: !!a.L};
-  });
-  return {
-    version: 2,
-    updatedAt: new Date().toISOString(),
-    assignments: compactAssignments,
-    events: events.map(normalizeEvent),
-    kidNames: {O: kidLabel("O"), L: kidLabel("L")}
-  };
+  const data = snapshotState();
+  persistLocal(data);
+  return data;
 }
 
 function applyState(data){
@@ -715,8 +765,8 @@ function applyState(data){
   assignments = data.assignments && typeof data.assignments === "object" ? data.assignments : {};
   if(data.kidNames && typeof data.kidNames === "object"){
     kidNames = {
-      O: (data.kidNames.O || "O").trim() || "O",
-      L: (data.kidNames.L || "L").trim() || "L"
+      O: (data.kidNames.O || data.kidNames.o || kidNames.O || "O").toString().trim() || "O",
+      L: (data.kidNames.L || data.kidNames.l || kidNames.L || "L").toString().trim() || "L"
     };
   }
   if(Array.isArray(data.events) && data.events.length){
@@ -740,8 +790,15 @@ function applyState(data){
 
 async function fetchRemoteState(){
   const res = await fetch(
-    `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${encodeURIComponent(GH_DATA_PATH)}?ref=${GH_BRANCH}`,
-    { headers: githubHeaders(true) }
+    `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${encodeURIComponent(GH_DATA_PATH)}?ref=${encodeURIComponent(GH_BRANCH)}&t=${Date.now()}`,
+    {
+      cache: "no-store",
+      headers: {
+        ...githubHeaders(true),
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache"
+      }
+    }
   );
   if(res.status === 404) return { sha: null, data: null };
   if(!res.ok){
@@ -750,6 +807,7 @@ async function fetchRemoteState(){
   }
   const json = await res.json();
   const text = decodeBase64(json.content || "");
+  fileSha = json.sha || null;
   return { sha: json.sha, data: text ? JSON.parse(text) : null };
 }
 
@@ -774,17 +832,20 @@ async function saveRemoteState(){
       `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${encodeURIComponent(GH_DATA_PATH)}`,
       {
         method: "PUT",
+        cache: "no-store",
         headers: { ...githubHeaders(true), "Content-Type": "application/json" },
         body: JSON.stringify(body)
       }
     );
   }
 
-  let { sha } = await fetchRemoteState();
-  let res = await put(sha);
+  if(!fileSha){
+    ({ sha: fileSha } = await fetchRemoteState());
+  }
+  let res = await put(fileSha);
   if(res.status === 409){
-    ({ sha } = await fetchRemoteState());
-    res = await put(sha);
+    ({ sha: fileSha } = await fetchRemoteState());
+    res = await put(fileSha);
   }
   if(res.status === 401 || res.status === 403){
     throw new Error("Jeton refusé. Vérifie qu'il a Contents: Read and write sur infinitethinking/kids.");
@@ -793,6 +854,10 @@ async function saveRemoteState(){
     const body = await res.text();
     throw new Error(`Enregistrement ${res.status}: ${body}`);
   }
+  try{
+    const json = await res.json();
+    if(json.content?.sha) fileSha = json.content.sha;
+  }catch(_){}
 }
 
 function toMinutes(t){
@@ -983,6 +1048,7 @@ function downloadIcs(ev){
 }
 
 function render(){
+  flushEditFields();
   updateKidChrome();
   const grid = document.getElementById('grid');
   grid.innerHTML = "";
@@ -1119,27 +1185,32 @@ function renderSummary(){
 function attachHandlers(){
   document.querySelectorAll('.kid-btn').forEach(btn=>{
     btn.onclick = ()=>{
+      flushEditFields();
       const id = btn.dataset.id, kid = btn.dataset.kid;
       const a = getAssign(id);
       a[kid] = !a[kid];
+      touchLocal();
       render();
     };
   });
   document.querySelectorAll('[data-edit]').forEach(btn=>{
     btn.onclick = ()=>{
+      flushEditFields();
       const id = btn.dataset.edit;
       editingId = (editingId === id) ? null : id;
       render();
     };
   });
   document.querySelectorAll('[data-field]').forEach(inp=>{
-    inp.onchange = ()=>{
-      const id = inp.dataset.id, field = inp.dataset.field;
-      updateEvent(id, field, inp.value);
+    const apply = (rerender)=>{
+      updateEvent(inp.dataset.id, inp.dataset.field, inp.value, rerender);
     };
+    inp.oninput = ()=> apply(false);
+    inp.onchange = ()=> apply(["day","club","sport"].includes(inp.dataset.field));
   });
   document.querySelectorAll('[data-ics]').forEach(btn=>{
     btn.onclick = ()=>{
+      flushEditFields();
       const ev = findEvent(btn.dataset.ics);
       if(ev) downloadIcs(ev);
     };
@@ -1149,9 +1220,11 @@ function attachHandlers(){
   });
   document.querySelectorAll('[data-optional]').forEach(btn=>{
     btn.onclick = ()=>{
+      flushEditFields();
       const ev = findEvent(btn.dataset.optional);
       if(!ev) return;
       ev.optional = !ev.optional;
+      touchLocal();
       render();
     };
   });
@@ -1161,16 +1234,47 @@ function attachHandlers(){
       events = events.filter(e => e.id !== id);
       delete assignments[id];
       editingId = null;
+      touchLocal();
       render();
     };
   });
 }
 
-function updateEvent(id, field, value){
+function refreshCardPreview(id){
+  const ev = findEvent(id);
+  if(!ev) return;
+  const fields = document.querySelector(`[data-fields="${id}"]`);
+  const card = fields?.closest(".event");
+  if(!card) return;
+  const time = card.querySelector(".time");
+  const activity = card.querySelector(".activity");
+  if(time) time.textContent = `${ev.start}–${ev.end}`;
+  if(activity) activity.textContent = ev.activity;
+  let loc = card.querySelector(".loc");
+  if(ev.loc){
+    if(!loc){
+      loc = document.createElement("div");
+      loc.className = "loc";
+      activity?.insertAdjacentElement("afterend", loc);
+    }
+    loc.textContent = ev.loc;
+  }else if(loc){
+    loc.remove();
+  }
+}
+
+function updateEvent(id, field, value, rerender){
   const ev = findEvent(id);
   if(!ev) return;
   ev[field] = value;
-  render();
+  touchLocal();
+  if(rerender){
+    render();
+    const el = document.querySelector(`[data-field="${field}"][data-id="${id}"]`);
+    if(el) el.focus();
+  }else{
+    refreshCardPreview(id);
+  }
 }
 
 function addSession(day){
@@ -1180,12 +1284,14 @@ function addSession(day){
     club:"tri", sport:"swim", activity:"Nouvelle séance", loc:"", optional:false
   });
   editingId = id;
+  touchLocal();
   render();
 }
 
 document.getElementById('tokenInput').value = localStorage.getItem(TOKEN_KEY) || "";
 fillKidNameInputs();
 syncTokenChrome();
+document.getElementById('saveBtn').disabled = true;
 
 document.getElementById('settingsBtn').addEventListener('click', ()=>{
   const drawer = document.getElementById('settingsDrawer');
@@ -1198,13 +1304,27 @@ document.addEventListener('keydown', (e)=>{
   if(e.key === 'Escape') closeSettings();
 });
 
+function refreshKidLabels(kid){
+  const label = kidLabel(kid);
+  document.querySelectorAll(`.kid-btn[data-kid="${kid}"]`).forEach(btn=>{
+    btn.textContent = label;
+  });
+  document.querySelectorAll(`.kid-chip.${kid}`).forEach(el=>{
+    el.textContent = label;
+  });
+}
+
 document.getElementById('kidNameO').addEventListener('input', ()=>{
   readKidNamesFromInputs();
-  render();
+  updateKidChrome();
+  refreshKidLabels("O");
+  touchLocal();
 });
 document.getElementById('kidNameL').addEventListener('input', ()=>{
   readKidNamesFromInputs();
-  render();
+  updateKidChrome();
+  refreshKidLabels("L");
+  touchLocal();
 });
 
 document.getElementById('tokenInput').addEventListener('input', syncTokenChrome);
@@ -1219,6 +1339,10 @@ document.getElementById('forgetTokenBtn').addEventListener('click', ()=>{
 
 document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const btn = document.getElementById('saveBtn');
+  if(!plannerReady){
+    markSave(false, "Chargement en cours, réessaie dans un instant.");
+    return;
+  }
   btn.disabled = true;
   try{
     await saveRemoteState();
@@ -1231,13 +1355,26 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
 });
 
 (async function init(){
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = true;
   try{
-    const { data } = await fetchRemoteState();
-    if(data) applyState(data);
-  }catch(err){
-    markSave(false, err.message || String(err));
+    let remote = null;
+    try{
+      const fetched = await fetchRemoteState();
+      remote = fetched.data;
+    }catch(err){
+      markSave(false, err.message || String(err));
+    }
+    const chosen = newerState(loadLocalState(), remote);
+    if(chosen) applyState(chosen);
+    readKidNamesFromInputs();
+    fillKidNameInputs();
+    if(chosen) persistLocal(snapshotState(chosen.updatedAt));
+  }finally{
+    plannerReady = true;
+    saveBtn.disabled = false;
+    render();
   }
-  render();
 })();
 </script>
 
