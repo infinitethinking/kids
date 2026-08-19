@@ -1,12 +1,8 @@
 {
   "version": 2,
-  "updatedAt": "2026-08-18T15:30:57.747Z",
+  "updatedAt": "2026-08-19T16:48:22.405Z",
   "assignments": {
     "tcg-jtn-lun-nat": {
-      "O": true,
-      "L": true
-    },
-    "bmx2": {
       "O": true,
       "L": true
     },
@@ -15,6 +11,10 @@
       "L": false
     },
     "tcg-jtn-mar-cap": {
+      "O": true,
+      "L": true
+    },
+    "custom_1787075326212": {
       "O": true,
       "L": true
     }
@@ -30,13 +30,13 @@
       "club": "bmx",
       "sport": "bike",
       "verify": false,
-      "optional": true
+      "optional": false
     },
     {
       "id": "bmx2",
       "day": "Mercredi",
-      "start": "14:00",
-      "end": "16:00",
+      "start": "14:30",
+      "end": "15:50",
       "activity": "BMX",
       "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
       "club": "bmx",
@@ -61,24 +61,12 @@
       "day": "Mardi",
       "start": "18:00",
       "end": "19:30",
-      "activity": "COURSE A PIEDS",
+      "activity": "COURSE A PIEDS/ENCHAINEMENT",
       "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
       "club": "tri",
       "sport": "run",
       "verify": false,
-      "optional": true
-    },
-    {
-      "id": "tcg-jtn-mer-nat",
-      "day": "Mercredi",
-      "start": "14:00",
-      "end": "15:00",
-      "activity": "Natation",
-      "loc": "Rue CHANDIEU 8 1202 Genève",
-      "club": "tri",
-      "sport": "swim",
-      "verify": false,
-      "optional": true
+      "optional": false
     },
     {
       "id": "tcg-jtn-jeu-cap",
@@ -90,7 +78,7 @@
       "club": "tri",
       "sport": "run",
       "verify": false,
-      "optional": true
+      "optional": false
     },
     {
       "id": "tcg-jtn-sam-nat",
@@ -114,7 +102,7 @@
       "club": "stade",
       "sport": "run",
       "verify": false,
-      "optional": true
+      "optional": false
     },
     {
       "id": "custom_1787062598389",
@@ -127,11 +115,84 @@
       "sport": "run",
       "verify": false,
       "optional": false
+    },
+    {
+      "id": "custom_1787074172228",
+      "day": "Mercredi",
+      "start": "18:00",
+      "end": "19:15",
+      "activity": "Natation PERFORMANCE",
+      "loc": "Bâtiment Patinoire des Vernets (GE) - Genève",
+      "club": "tri",
+      "sport": "swim",
+      "verify": false,
+      "optional": false
+    },
+    {
+      "id": "custom_1787074821691",
+      "day": "Lundi",
+      "start": "17:00",
+      "end": "18:00",
+      "activity": "ATHLE",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
+      "club": "stade",
+      "sport": "run",
+      "verify": false,
+      "optional": false
+    },
+    {
+      "id": "custom_1787074923560",
+      "day": "Mardi",
+      "start": "17:00",
+      "end": "19:00",
+      "activity": "ATHLE",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
+      "club": "stade",
+      "sport": "run",
+      "verify": false,
+      "optional": false
+    },
+    {
+      "id": "custom_1787075031926",
+      "day": "Mercredi",
+      "start": "18:00",
+      "end": "20:00",
+      "activity": "ATHLE",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
+      "club": "stade",
+      "sport": "run",
+      "verify": false,
+      "optional": false
+    },
+    {
+      "id": "custom_1787075059876",
+      "day": "Jeudi",
+      "start": "17:00",
+      "end": "18:00",
+      "activity": "ATHLE",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
+      "club": "stade",
+      "sport": "run",
+      "verify": false,
+      "optional": false
+    },
+    {
+      "id": "custom_1787075326212",
+      "day": "Mercredi",
+      "start": "13:00",
+      "end": "14:20",
+      "activity": "BMX",
+      "loc": "Bâtiment Stade d'athlétisme du Bout du Monde (GE) - Genève",
+      "club": "bmx",
+      "sport": "bike",
+      "verify": false,
+      "optional": false
     }
   ],
   "deletedIds": [
     "custom_1787061850825",
-    "custom_1787061570285"
+    "custom_1787061570285",
+    "tcg-jtn-mer-nat"
   ],
   "kidNames": {
     "O": "OLIVIA",
