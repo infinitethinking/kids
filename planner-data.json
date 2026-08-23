@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updatedAt": "2026-08-19T16:48:22.405Z",
+  "updatedAt": "2026-08-23T13:09:52.534Z",
   "assignments": {
     "tcg-jtn-lun-nat": {
       "O": true,
@@ -30,7 +30,7 @@
       "club": "bmx",
       "sport": "bike",
       "verify": false,
-      "optional": false
+      "optional": true
     },
     {
       "id": "bmx2",
