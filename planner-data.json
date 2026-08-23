@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updatedAt": "2026-08-23T13:10:05.482Z",
+  "updatedAt": "2026-08-23T13:10:12.531Z",
   "assignments": {
     "tcg-jtn-lun-nat": {
       "O": true,
@@ -102,7 +102,7 @@
       "club": "stade",
       "sport": "run",
       "verify": false,
-      "optional": false
+      "optional": true
     },
     {
       "id": "custom_1787062598389",
